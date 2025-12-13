@@ -1,0 +1,48 @@
+.DS_Store
+.idea/
+.vscode/
+
+# Flutter & Dart
+**/build/
+**/.dart_tool/
+**/.packages
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.metadata
+
+# Android / Gradle
+**/.gradle/
+**/android/.gradle/
+**/android/app/google-services.json
+
+# iOS / CocoaPods
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework/
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+
+# Archives / binaries
+*.zip
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.apk
+*.ipa
+
+# IDE / misc
+*.iml
+*.log
+.DS_Store?
+
+
+
+# Secrets
+customer/ios/Runner/original
+
