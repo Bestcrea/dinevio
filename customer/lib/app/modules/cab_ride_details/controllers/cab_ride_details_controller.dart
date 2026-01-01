@@ -105,7 +105,9 @@ class CabRideDetailsController extends GetxController {
   }
 
   Future<void> getProfileData() async {
-    await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid()).then((value) {
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+    await FireStoreUtils.getUserProfile(uid).then((value) {
       if (value != null) {
         userModel.value = value;
       }
@@ -187,7 +189,7 @@ class CabRideDetailsController extends GetxController {
         body: 'Payment Received for Ride #${bookingModel.value.id.toString().substring(0, 5)}',
         bookingId: bookingModel.value.id,
         driverId: bookingModel.value.driverId.toString(),
-        senderId: FireStoreUtils.getCurrentUid(),
+        senderId: FireStoreUtils.getCurrentUid() ?? "",
         payload: playLoad);
 
     ShowToastDialog.closeLoader();

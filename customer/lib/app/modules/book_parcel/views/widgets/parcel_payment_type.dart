@@ -44,8 +44,8 @@ class ParcelPaymentDialogView extends StatelessWidget {
               child: RoundShapeButton(
                   size: const Size(200, 45),
                   title: "Ride Placed".tr,
-                  buttonColor: AppThemData.primary500,
-                  buttonTextColor: AppThemData.black,
+                  buttonColor: AppThemData.black,
+                  buttonTextColor: AppThemData.white,
                   onTap: () {
                     controller.saveParcelData();
                     // Get.back();

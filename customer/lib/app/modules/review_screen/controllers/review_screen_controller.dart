@@ -63,7 +63,9 @@ class ReviewScreenController extends GetxController {
         driverModel.value = value;
       }
     });
-    await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid()).then((value) {
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+    await FireStoreUtils.getUserProfile(uid).then((value) {
       if (value != null) {
         log("----->3");
         userModel.value = value;

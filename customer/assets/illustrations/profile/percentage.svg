@@ -1,0 +1,26 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient effect -->
+  <circle cx="120" cy="120" r="100" fill="#7E57C2" fill-opacity="0.1"/>
+  <circle cx="120" cy="120" r="90" fill="#7E57C2" fill-opacity="0.08"/>
+  
+  <!-- Percentage symbol -->
+  <g transform="translate(120, 120)">
+    <!-- Top circle -->
+    <circle cx="-30" cy="-25" r="28" fill="#7E57C2" fill-opacity="0.25"/>
+    <circle cx="-30" cy="-25" r="22" fill="#7E57C2"/>
+    
+    <!-- Diagonal line -->
+    <line x1="-50" y1="15" x2="50" y2="-15" stroke="#7E57C2" stroke-width="8" stroke-linecap="round"/>
+    
+    <!-- Bottom circle -->
+    <circle cx="30" cy="25" r="28" fill="#7E57C2" fill-opacity="0.25"/>
+    <circle cx="30" cy="25" r="22" fill="#7E57C2"/>
+  </g>
+  
+  <!-- Decorative dots -->
+  <circle cx="60" cy="60" r="4" fill="#7E57C2" fill-opacity="0.2"/>
+  <circle cx="180" cy="60" r="4" fill="#7E57C2" fill-opacity="0.2"/>
+  <circle cx="60" cy="180" r="4" fill="#7E57C2" fill-opacity="0.2"/>
+  <circle cx="180" cy="180" r="4" fill="#7E57C2" fill-opacity="0.2"/>
+</svg>
+

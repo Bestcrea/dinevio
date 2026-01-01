@@ -10,6 +10,7 @@ class VerifyOtpController extends GetxController {
   RxString verificationId = "".obs;
   RxInt resendToken = 0.obs;
   RxBool isLoading = true.obs;
+  RxBool isTestMode = false.obs;
 
   @override
   void onInit() {
@@ -23,6 +24,7 @@ class VerifyOtpController extends GetxController {
       countryCode.value = argumentData['countryCode'];
       phoneNumber.value = argumentData['phoneNumber'];
       verificationId.value = argumentData['verificationId'];
+      isTestMode.value = argumentData['isTestMode'] ?? false;
     }
     isLoading.value = false;
     update();

@@ -62,7 +62,10 @@ class InterCityRideDetailsController extends GetxController {
   }
 
   Future<void> getReview() async {
-    await FirebaseFirestore.instance.collection(CollectionName.review).get().then((value) {
+    await FirebaseFirestore.instance
+        .collection(CollectionName.review)
+        .get()
+        .then((value) {
       for (var element in value.docs) {
         ReviewModel reviewModel = ReviewModel.fromJson(element.data());
         reviewList.add(reviewModel);
@@ -76,7 +79,8 @@ class InterCityRideDetailsController extends GetxController {
       if (value != null) {
         paymentModel.value = value;
         if (paymentModel.value.strip!.isActive == true) {
-          Stripe.publishableKey = paymentModel.value.strip!.clientPublishableKey.toString();
+          Stripe.publishableKey =
+              paymentModel.value.strip!.clientPublishableKey.toString();
           Stripe.merchantIdentifier = 'Dinevio';
           Stripe.instance.applySettings();
         }
@@ -94,7 +98,8 @@ class InterCityRideDetailsController extends GetxController {
   }
 
   void listenToInterCityRideDetails() {
-    FireStoreUtils.getInterCityRideDetails(bookingId.value).listen((IntercityModel? model) {
+    FireStoreUtils.getInterCityRideDetails(bookingId.value)
+        .listen((IntercityModel? model) {
       interCityModel.value = model ?? IntercityModel();
     });
     if (selectedPaymentMethod.value == '') {
@@ -103,7 +108,9 @@ class InterCityRideDetailsController extends GetxController {
   }
 
   Future<void> getProfileData() async {
-    await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid()).then((value) {
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+    await FireStoreUtils.getUserProfile(uid).then((value) {
       if (value != null) {
         userModel.value = value;
       }
@@ -117,11 +124,15 @@ class InterCityRideDetailsController extends GetxController {
 
     interCityModel.value.paymentType = selectedPaymentMethod.value;
     if (interCityModel.value.paymentType == Constant.paymentModel!.cash!.name) {
-      interCityModel.value.paymentStatus = selectedPaymentMethod.value == Constant.paymentModel!.cash!.name ? false : true;
+      interCityModel.value.paymentStatus =
+          selectedPaymentMethod.value == Constant.paymentModel!.cash!.name
+              ? false
+              : true;
     }
 
     // Create and process driver wallet transaction
-    final interCityFinalAmount = Constant.calculateInterCityFinalAmount(interCityModel.value).toString();
+    final interCityFinalAmount =
+        Constant.calculateInterCityFinalAmount(interCityModel.value).toString();
     WalletTransactionModel transactionModel = WalletTransactionModel(
       id: Constant.getUuid(),
       amount: interCityFinalAmount,
@@ -133,12 +144,16 @@ class InterCityRideDetailsController extends GetxController {
       type: Constant.typeDriver,
       note: "Ride fee Credited ",
     );
-    final driverWalletResult = await FireStoreUtils.setWalletTransaction(transactionModel);
+    final driverWalletResult =
+        await FireStoreUtils.setWalletTransaction(transactionModel);
     if (driverWalletResult == true) {
-      await FireStoreUtils.updateOtherUserWallet(amount: interCityFinalAmount, id: interCityModel.value.driverId!);
+      await FireStoreUtils.updateOtherUserWallet(
+          amount: interCityFinalAmount, id: interCityModel.value.driverId!);
     }
 
-    if (Constant.adminCommission != null && Constant.adminCommission!.active == true && num.parse(Constant.adminCommission!.value!) > 0) {
+    if (Constant.adminCommission != null &&
+        Constant.adminCommission!.active == true &&
+        num.parse(Constant.adminCommission!.value!) > 0) {
       WalletTransactionModel adminCommissionWallet = WalletTransactionModel(
         id: Constant.getUuid(),
         amount:
@@ -153,7 +168,8 @@ class InterCityRideDetailsController extends GetxController {
         adminCommission: interCityModel.value.adminCommission,
       );
 
-      await FireStoreUtils.setWalletTransaction(adminCommissionWallet).then((value) async {
+      await FireStoreUtils.setWalletTransaction(adminCommissionWallet)
+          .then((value) async {
         if (value == true) {
           await FireStoreUtils.updateOtherUserWallet(
               amount:
@@ -169,22 +185,28 @@ class InterCityRideDetailsController extends GetxController {
 
     interCityModel.value.paymentStatus = isPaymentStatus;
 
-    await FireStoreUtils.setInterCityBooking(interCityModel.value).then((value) {
+    await FireStoreUtils.setInterCityBooking(interCityModel.value)
+        .then((value) {
       ShowToastDialog.closeLoader();
       // Get.offAllNamed(Routes.HOME);
     });
     log('====---444--> selecte payment status ${interCityModel.value.paymentStatus}');
 
-    DriverUserModel? receiverUserModel = await FireStoreUtils.getDriverUserProfile(interCityModel.value.driverId.toString());
-    Map<String, dynamic> playLoad = <String, dynamic>{"bookingId": interCityModel.value.id};
+    DriverUserModel? receiverUserModel =
+        await FireStoreUtils.getDriverUserProfile(
+            interCityModel.value.driverId.toString());
+    Map<String, dynamic> playLoad = <String, dynamic>{
+      "bookingId": interCityModel.value.id
+    };
     await SendNotification.sendOneNotification(
         type: "order",
         token: receiverUserModel!.fcmToken.toString(),
         title: 'Payment Received'.tr,
-        body: 'Payment Received for Ride #${interCityModel.value.id.toString().substring(0, 5)}',
+        body:
+            'Payment Received for Ride #${interCityModel.value.id.toString().substring(0, 5)}',
         bookingId: interCityModel.value.id,
         driverId: interCityModel.value.driverId.toString(),
-        senderId: FireStoreUtils.getCurrentUid(),
+        senderId: FireStoreUtils.getCurrentUid() ?? "",
         payload: playLoad);
 
     ShowToastDialog.closeLoader();
@@ -209,7 +231,7 @@ class InterCityRideDetailsController extends GetxController {
     transactionLogModel.value.transactionLog = transactionLog.toString();
     transactionLogModel.value.isCredit = isCredit;
     transactionLogModel.value.createdAt = Timestamp.now();
-    transactionLogModel.value.userId = FireStoreUtils.getCurrentUid();
+    transactionLogModel.value.userId = FireStoreUtils.getCurrentUid() ?? "";
     transactionLogModel.value.paymentType = selectedPaymentMethod.value;
     transactionLogModel.value.type = 'wallet';
     await FireStoreUtils.setTransactionLog(transactionLogModel.value);
@@ -223,7 +245,8 @@ class InterCityRideDetailsController extends GetxController {
     // ShowToastDialog.showToast("Payment successful");
     WalletTransactionModel transactionModel = WalletTransactionModel(
         id: Constant.getUuid(),
-        amount: Constant.calculateInterCityFinalAmount(interCityModel.value).toString(),
+        amount: Constant.calculateInterCityFinalAmount(interCityModel.value)
+            .toString(),
         createdDate: Timestamp.now(),
         paymentType: selectedPaymentMethod.value,
         transactionId: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -232,9 +255,13 @@ class InterCityRideDetailsController extends GetxController {
         type: Constant.typeCustomer,
         note: "Ride fee Debited");
 
-    await FireStoreUtils.setWalletTransaction(transactionModel).then((value) async {
+    await FireStoreUtils.setWalletTransaction(transactionModel)
+        .then((value) async {
       if (value == true) {
-        await FireStoreUtils.updateUserWallet(amount: "-${Constant.calculateInterCityFinalAmount(interCityModel.value).toString()}").then((value) async {
+        await FireStoreUtils.updateUserWallet(
+                amount:
+                    "-${Constant.calculateInterCityFinalAmount(interCityModel.value).toString()}")
+            .then((value) async {
           await getProfileData();
           interCityModel.value.paymentStatus = true;
           await FireStoreUtils.setInterCityBooking(interCityModel.value);
@@ -254,10 +281,12 @@ class InterCityRideDetailsController extends GetxController {
       log(double.parse(amount).toStringAsFixed(0));
       log(double.parse(finalAmount.toString()).toStringAsFixed(0));
       try {
-        Map<String, dynamic>? paymentIntentData = await createStripeIntent(amount: finalAmount.toString());
+        Map<String, dynamic>? paymentIntentData =
+            await createStripeIntent(amount: finalAmount.toString());
         if (paymentIntentData!.containsKey("error")) {
           Get.back();
-          ShowToastDialog.showToast("Something went wrong, please contact admin.");
+          ShowToastDialog.showToast(
+              "Something went wrong, please contact admin.");
         } else {
           await Stripe.instance.initPaymentSheet(
               paymentSheetParameters: SetupPaymentSheetParameters(
@@ -275,7 +304,9 @@ class InterCityRideDetailsController extends GetxController {
                     ),
                   ),
                   merchantDisplayName: 'Dinevio'));
-          displayStripePaymentSheet(amount: finalAmount.toString(), client_secret: paymentIntentData['client_secret']);
+          displayStripePaymentSheet(
+              amount: finalAmount.toString(),
+              client_secret: paymentIntentData['client_secret']);
         }
       } catch (e, s) {
         log("$e \n$s");
@@ -286,7 +317,8 @@ class InterCityRideDetailsController extends GetxController {
     }
   }
 
-  Future<void> displayStripePaymentSheet({required String amount, required String client_secret}) async {
+  Future<void> displayStripePaymentSheet(
+      {required String amount, required String client_secret}) async {
     try {
       int finalAmount = amount.toInt();
       await Stripe.instance.presentPaymentSheet().then((value) async {
@@ -296,7 +328,11 @@ class InterCityRideDetailsController extends GetxController {
             interCityModel.value.paymentStatus = true;
             log('=================> Stripe  payment  ========> ${value.toJson()}');
             completeOrder(value.id);
-            setTransactionLog(isCredit: true, transactionId: value.id, transactionLog: value, amount: finalAmount.toString());
+            setTransactionLog(
+                isCredit: true,
+                transactionId: value.id,
+                transactionLog: value,
+                amount: finalAmount.toString());
           },
         );
 
@@ -329,8 +365,13 @@ class InterCityRideDetailsController extends GetxController {
       };
       log(paymentModel.value.strip!.stripeSecret.toString());
       var stripeSecret = paymentModel.value.strip!.stripeSecret;
-      var response =
-          await http.post(Uri.parse('https://api.stripe.com/v1/payment_intents'), body: body, headers: {'Authorization': 'Bearer $stripeSecret', 'Content-Type': 'application/x-www-form-urlencoded'});
+      var response = await http.post(
+          Uri.parse('https://api.stripe.com/v1/payment_intents'),
+          body: body,
+          headers: {
+            'Authorization': 'Bearer $stripeSecret',
+            'Content-Type': 'application/x-www-form-urlencoded'
+          });
 
       return jsonDecode(response.body);
     } catch (e) {
@@ -350,7 +391,11 @@ class InterCityRideDetailsController extends GetxController {
               ShowToastDialog.showToast("Payment Successful");
               interCityModel.value.paymentStatus = true;
               completeOrder(result['orderId']);
-              setTransactionLog(isCredit: true, transactionId: result['orderId'], transactionLog: result, amount: finalAmount.toString());
+              setTransactionLog(
+                  isCredit: true,
+                  transactionId: result['orderId'],
+                  transactionLog: result,
+                  amount: finalAmount.toString());
             } else {
               ShowToastDialog.showToast("Payment canceled or failed.");
             }
@@ -378,17 +423,23 @@ class InterCityRideDetailsController extends GetxController {
           'wallets': ['paytm']
         },
         'send_sms_hash': true,
-        'prefill': {'contact': userModel.value.phoneNumber, 'email': userModel.value.email},
+        'prefill': {
+          'contact': userModel.value.phoneNumber,
+          'email': userModel.value.email
+        },
       };
 
       _razorpay.open(options);
       // _razorpay.on(razor_pay_flutter.Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-      _razorpay.on(razor_pay_flutter.Razorpay.EVENT_PAYMENT_SUCCESS, (response) {
+      _razorpay.on(razor_pay_flutter.Razorpay.EVENT_PAYMENT_SUCCESS,
+          (response) {
         log("====> 1");
         _handlePaymentSuccess(response, finalAmount.toString());
       });
-      _razorpay.on(razor_pay_flutter.Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-      _razorpay.on(razor_pay_flutter.Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+      _razorpay.on(
+          razor_pay_flutter.Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+      _razorpay.on(razor_pay_flutter.Razorpay.EVENT_EXTERNAL_WALLET,
+          _handleExternalWallet);
     } catch (e) {
       log('Error in razorpayMakePayment: $e');
     }
@@ -399,9 +450,19 @@ class InterCityRideDetailsController extends GetxController {
 
     ShowToastDialog.showToast("Payment Successfully");
     interCityModel.value.paymentStatus = true;
-    completeOrder(response.paymentId ?? DateTime.now().millisecondsSinceEpoch.toString());
+    completeOrder(
+        response.paymentId ?? DateTime.now().millisecondsSinceEpoch.toString());
     setTransactionLog(
-        isCredit: true, transactionId: response.paymentId.toString(), transactionLog: {response.paymentId, response.paymentId, response.data, response.orderId, response.signature}, amount: amount);
+        isCredit: true,
+        transactionId: response.paymentId.toString(),
+        transactionLog: {
+          response.paymentId,
+          response.paymentId,
+          response.data,
+          response.orderId,
+          response.signature
+        },
+        amount: amount);
     log('Payment Success: ${response.paymentId}');
     _razorpay.clear();
     _razorpay = razor_pay_flutter.Razorpay();
@@ -424,7 +485,8 @@ class InterCityRideDetailsController extends GetxController {
   }
 
   // ::::::::::::::::::::::::::::::::::::::::::::FlutterWave::::::::::::::::::::::::::::::::::::::::::::::::::::
-  Future<Null> flutterWaveInitiatePayment({required BuildContext context, required String amount}) async {
+  Future<Null> flutterWaveInitiatePayment(
+      {required BuildContext context, required String amount}) async {
     int finalAmount = amount.toInt();
 
     final url = Uri.parse('https://api.flutterwave.com/v3/payments');
@@ -455,7 +517,8 @@ class InterCityRideDetailsController extends GetxController {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       ShowToastDialog.closeLoader();
-      await Get.to(FlutterWaveScreen(initialURl: data['data']['link']))!.then((value) {
+      await Get.to(FlutterWaveScreen(initialURl: data['data']['link']))!
+          .then((value) {
         if (value != null && value is Map<String, dynamic>) {
           if (value["status"] == true) {
             log(":::::::::::::::::::::::::::::::::::$data");
@@ -463,7 +526,11 @@ class InterCityRideDetailsController extends GetxController {
             log('=================> FlutterWaveScreen  payFastPayment ========> $value');
             interCityModel.value.paymentStatus = true;
             completeOrder(value['transaction_id'] ?? '');
-            setTransactionLog(isCredit: true, transactionId: value['transaction_id'], transactionLog: value, amount: amount);
+            setTransactionLog(
+                isCredit: true,
+                transactionId: value['transaction_id'],
+                transactionLog: value,
+                amount: amount);
           } else {
             ShowToastDialog.showToast("Payment UnSuccessful!!");
           }
@@ -532,7 +599,10 @@ class InterCityRideDetailsController extends GetxController {
     int finalAmount = totalAmount.toInt();
 
     await PayStackURLGen.payStackURLGen(
-            amount: (double.parse(finalAmount.toString()) * 100).toString(), currency: "NGN", secretKey: paymentModel.value.payStack!.payStackSecret.toString(), userModel: userModel.value)
+            amount: (double.parse(finalAmount.toString()) * 100).toString(),
+            currency: "NGN",
+            secretKey: paymentModel.value.payStack!.payStackSecret.toString(),
+            userModel: userModel.value)
         .then((value) async {
       if (value != null) {
         PayStackUrlModel payStackModel = value;
@@ -549,20 +619,26 @@ class InterCityRideDetailsController extends GetxController {
             interCityModel.value.paymentStatus = true;
 
             completeOrder(value['transaction_id']);
-            setTransactionLog(isCredit: true, transactionId: value['transaction_id'], transactionLog: value, amount: totalAmount);
+            setTransactionLog(
+                isCredit: true,
+                transactionId: value['transaction_id'],
+                transactionLog: value,
+                amount: totalAmount);
           } else {
             ShowToastDialog.showToast("Payment UnSuccessful!!");
           }
         });
       } else {
-        ShowToastDialog.showToast("Something went wrong, please contact admin.");
+        ShowToastDialog.showToast(
+            "Something went wrong, please contact admin.");
       }
     });
   }
 
   // ::::::::::::::::::::::::::::::::::::::::::::Mercado Pago::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-  void mercadoPagoMakePayment({required BuildContext context, required String amount}) {
+  void mercadoPagoMakePayment(
+      {required BuildContext context, required String amount}) {
     int finalAmount = amount.toInt();
 
     makePreference(finalAmount.toString()).then((result) async {
@@ -573,7 +649,9 @@ class InterCityRideDetailsController extends GetxController {
             var preferenceId = result['response']['id'];
             log(preferenceId);
 
-            Get.to(MercadoPagoScreen(initialURl: result['response']['init_point']))!.then((value) {
+            Get.to(MercadoPagoScreen(
+                    initialURl: result['response']['init_point']))!
+                .then((value) {
               log(value);
 
               if (value) {
@@ -599,13 +677,22 @@ class InterCityRideDetailsController extends GetxController {
   }
 
   Future<Map<String, dynamic>> makePreference(String amount) async {
-    final mp = MP.fromAccessToken(paymentModel.value.mercadoPago!.mercadoPagoAccessToken);
+    final mp = MP.fromAccessToken(
+        paymentModel.value.mercadoPago!.mercadoPagoAccessToken);
     var pref = {
       "items": [
-        {"title": "Wallet TopUp", "quantity": 1, "unit_price": double.parse(amount)}
+        {
+          "title": "Wallet TopUp",
+          "quantity": 1,
+          "unit_price": double.parse(amount)
+        }
       ],
       "auto_return": "all",
-      "back_urls": {"failure": "${Constant.paymentCallbackURL}/failure", "pending": "${Constant.paymentCallbackURL}/pending", "success": "${Constant.paymentCallbackURL}/success"},
+      "back_urls": {
+        "failure": "${Constant.paymentCallbackURL}/failure",
+        "pending": "${Constant.paymentCallbackURL}/pending",
+        "success": "${Constant.paymentCallbackURL}/success"
+      },
     };
 
     var result = await mp.createPreference(pref);
@@ -617,8 +704,13 @@ class InterCityRideDetailsController extends GetxController {
   void payFastPayment({required BuildContext context, required String amount}) {
     int finalAmount = amount.toInt();
 
-    PayStackURLGen.getPayHTML(payFastSettingData: paymentModel.value.payFast!, amount: finalAmount.toString(), userModel: userModel.value).then((String? value) async {
-      bool isDone = await Get.to(PayFastScreen(htmlData: value!, payFastSettingData: paymentModel.value.payFast!));
+    PayStackURLGen.getPayHTML(
+            payFastSettingData: paymentModel.value.payFast!,
+            amount: finalAmount.toString(),
+            userModel: userModel.value)
+        .then((String? value) async {
+      bool isDone = await Get.to(PayFastScreen(
+          htmlData: value!, payFastSettingData: paymentModel.value.payFast!));
       if (isDone) {
         Get.back();
         ShowToastDialog.showToast("Payment successfully");

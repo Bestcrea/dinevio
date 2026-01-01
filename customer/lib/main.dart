@@ -1,4 +1,4 @@
-
+import 'dart:ui';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -11,14 +11,30 @@ import 'package:customer/services/localization_service.dart';
 import 'package:customer/theme/styles.dart';
 import 'package:customer/utils/dark_theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:customer/services/payment_service.dart';
+import 'package:customer/utils/fire_store_utils.dart';
 
 import 'app/routes/app_pages.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+
+  // Gérer les erreurs Flutter pour éviter les écrans rouges
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('Flutter Error: ${details.exception}');
+    debugPrint('Stack: ${details.stack}');
+  };
+
+  // Gérer les erreurs asynchrones
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Platform Error: $error');
+    debugPrint('Stack: $stack');
+    return true; // Empêcher l'app de crasher
+  };
+
+  await _initFirebaseSafe();
+  await _initStripe();
   configLoading();
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
@@ -29,6 +45,67 @@ Future<void> main() async {
     ),
     home: const MyApp(),
   ));
+}
+
+Future<void> _initFirebaseSafe() async {
+  try {
+    // Vérifier si Firebase est déjà initialisé
+    if (Firebase.apps.isNotEmpty) {
+      debugPrint('Firebase already initialized');
+      return;
+    }
+
+    // Initialiser Firebase avec DefaultFirebaseOptions.currentPlatform
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint('Firebase initialized successfully with DefaultFirebaseOptions');
+      return;
+    } catch (e) {
+      debugPrint('Firebase initialization failed: $e');
+      // Fallback: essayer sans options (utilisera google-services.json / GoogleService-Info.plist)
+      try {
+        await Firebase.initializeApp();
+        debugPrint('Firebase initialized successfully from native config files');
+        return;
+      } catch (e2) {
+        debugPrint('Firebase initialization from native files also failed: $e2');
+        debugPrint('App will continue without Firebase');
+      }
+    }
+  } catch (e, stackTrace) {
+    debugPrint('Firebase init critical error: $e');
+    debugPrint('Stack trace: $stackTrace');
+    // Ne pas planter l'app, continuer sans Firebase
+  }
+}
+
+/// Initialize Stripe with publishable key from Firestore settings
+Future<void> _initStripe() async {
+  try {
+    // Get payment settings from Firestore
+    final paymentModel = await FireStoreUtils().getPayment();
+    if (paymentModel != null && 
+        paymentModel.strip != null && 
+        paymentModel.strip!.isActive == true &&
+        paymentModel.strip!.clientPublishableKey != null &&
+        paymentModel.strip!.clientPublishableKey!.isNotEmpty) {
+      
+      // Initialize Stripe with publishable key and merchant identifier
+      await PaymentService.initializeStripe(
+        publishableKey: paymentModel.strip!.clientPublishableKey!,
+        merchantIdentifier: 'merchant.com.dinevio.app',
+        merchantDisplayName: 'Dinevio',
+      );
+      debugPrint('Stripe initialized successfully');
+    } else {
+      debugPrint('Stripe is not active or publishable key not found');
+    }
+  } catch (e) {
+    debugPrint('Failed to initialize Stripe: $e');
+    // Don't crash the app if Stripe initialization fails
+  }
 }
 
 class MyApp extends StatefulWidget {
@@ -55,7 +132,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void getCurrentAppTheme() async {
-    themeChangeProvider.darkTheme = await themeChangeProvider.darkThemePreference.getTheme();
+    themeChangeProvider.darkTheme =
+        await themeChangeProvider.darkThemePreference.getTheme();
   }
 
   @override
@@ -69,7 +147,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           return Listener(
             onPointerUp: (_) {
               FocusScopeNode currentFocus = FocusScope.of(context);
-              if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+              if (!currentFocus.hasPrimaryFocus &&
+                  currentFocus.focusedChild != null) {
                 currentFocus.focusedChild!.unfocus();
               }
             },

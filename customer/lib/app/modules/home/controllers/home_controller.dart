@@ -24,7 +24,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeController extends GetxController {
   final count = 0.obs;
-  RxString profilePic = "https://firebasestorage.googleapis.com/v0/b/mytaxi-a8627.appspot.com/o/constant_assets%2F59.png?alt=media&token=a0b1aebd-9c01-45f6-9569-240c4bc08e23".obs;
+  RxString profilePic =
+      "https://firebasestorage.googleapis.com/v0/b/mytaxi-a8627.appspot.com/o/constant_assets%2F59.png?alt=media&token=a0b1aebd-9c01-45f6-9569-240c4bc08e23"
+          .obs;
   RxString name = ''.obs;
   RxString phoneNumber = ''.obs;
   RxList<BannerModel> bannerList = <BannerModel>[].obs;
@@ -55,14 +57,21 @@ class HomeController extends GetxController {
   Future<void> getUserData() async {
     isLoading.value = true;
 
-    UserModel? userModel = await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid());
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) {
+      isLoading.value = false;
+      return;
+    }
+    UserModel? userModel = await FireStoreUtils.getUserProfile(uid);
     await checkActiveStatus();
     if (userModel != null) {
       profilePic.value = (userModel.profilePic ?? "").isNotEmpty
-          ? userModel.profilePic ?? "https://firebasestorage.googleapis.com/v0/b/mytaxi-a8627.appspot.com/o/constant_assets%2F59.png?alt=media&token=a0b1aebd-9c01-45f6-9569-240c4bc08e23"
+          ? userModel.profilePic ??
+              "https://firebasestorage.googleapis.com/v0/b/mytaxi-a8627.appspot.com/o/constant_assets%2F59.png?alt=media&token=a0b1aebd-9c01-45f6-9569-240c4bc08e23"
           : "https://firebasestorage.googleapis.com/v0/b/mytaxi-a8627.appspot.com/o/constant_assets%2F59.png?alt=media&token=a0b1aebd-9c01-45f6-9569-240c4bc08e23";
       name.value = userModel.fullName ?? '';
-      phoneNumber.value = (userModel.countryCode ?? '') + (userModel.phoneNumber ?? '');
+      phoneNumber.value =
+          (userModel.countryCode ?? '') + (userModel.phoneNumber ?? '');
       userModel.fcmToken = await NotificationService.getToken();
       await FireStoreUtils.updateUser(userModel);
       await FireStoreUtils.getBannerList().then((value) {
@@ -82,22 +91,28 @@ class HomeController extends GetxController {
           BookingStatus.bookingOngoing,
           BookingStatus.driverAssigned,
         ])
-        .where("customerId", isEqualTo: FireStoreUtils.getCurrentUid())
+        .where("customerId", isEqualTo: FireStoreUtils.getCurrentUid() ?? "")
         .orderBy("createAt", descending: true)
         .snapshots()
         .listen((event) {
-          bookingList.value = event.docs.map((doc) => BookingModel.fromJson(doc.data())).toList();
+          bookingList.value = event.docs
+              .map((doc) => BookingModel.fromJson(doc.data()))
+              .toList();
         });
   }
 
   Future<void> checkActiveStatus() async {
-    final userModel = await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid());
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+    final userModel = await FireStoreUtils.getUserProfile(uid);
     if (userModel != null && userModel.isActive == false) {
       Get.defaultDialog(
         titlePadding: const EdgeInsets.only(top: 16),
         title: "Account Disabled",
-        middleText: "Your account has been disabled. Please contact the administrator.",
-        titleStyle: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700),
+        middleText:
+            "Your account has been disabled. Please contact the administrator.",
+        titleStyle:
+            GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700),
         barrierDismissible: false,
         onWillPop: () async {
           SystemNavigator.pop();
@@ -121,23 +136,33 @@ class HomeController extends GetxController {
       location.onLocationChanged.listen((locationData) {
         log("------>");
         log(locationData.toString());
-        Constant.currentLocation = LocationLatLng(latitude: locationData.latitude, longitude: locationData.longitude);
+        Constant.currentLocation = LocationLatLng(
+            latitude: locationData.latitude, longitude: locationData.longitude);
       });
     } else {
       location.requestPermission().then((permissionStatus) {
         if (permissionStatus == PermissionStatus.granted) {
           location.enableBackgroundMode(enable: true);
-          location.changeSettings(accuracy: LocationAccuracy.high, distanceFilter: double.parse(Constant.driverLocationUpdate.toString()), interval: 10000);
+          location.changeSettings(
+              accuracy: LocationAccuracy.high,
+              distanceFilter:
+                  double.parse(Constant.driverLocationUpdate.toString()),
+              interval: 10000);
           location.onLocationChanged.listen((locationData) async {
-            Constant.currentLocation = LocationLatLng(latitude: locationData.latitude, longitude: locationData.longitude);
+            Constant.currentLocation = LocationLatLng(
+                latitude: locationData.latitude,
+                longitude: locationData.longitude);
           });
         }
       });
     }
 
-    if (Constant.isInterCitySharingBid == true && Constant.isParcelBid == true && Constant.isInterCitySharingBid == true) {
+    if (Constant.isInterCitySharingBid == true &&
+        Constant.isParcelBid == true &&
+        Constant.isInterCitySharingBid == true) {
       suggestionView.value = 3;
-    } else if (Constant.isInterCitySharingBid == false && Constant.isInterCitySharingBid == false) {
+    } else if (Constant.isInterCitySharingBid == false &&
+        Constant.isInterCitySharingBid == false) {
       suggestionView.value = 2;
     } else {
       suggestionView.value = 1;
@@ -148,7 +173,12 @@ class HomeController extends GetxController {
 
   Future<void> deleteUserAccount() async {
     try {
-      await FirebaseFirestore.instance.collection(CollectionName.users).doc(FireStoreUtils.getCurrentUid()).delete();
+      final uid = FireStoreUtils.getCurrentUid();
+      if (uid == null) return;
+      await FirebaseFirestore.instance
+          .collection(CollectionName.users)
+          .doc(uid)
+          .delete();
 
       await FirebaseAuth.instance.currentUser!.delete();
     } on FirebaseAuthException catch (error) {

@@ -12,6 +12,7 @@ import 'package:customer/extension/date_time_extension.dart';
 import 'package:customer/theme/app_them_data.dart';
 import 'package:customer/theme/responsive.dart';
 import 'package:customer/utils/dark_theme_provider.dart';
+import 'package:customer/utils/currency_formatter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -372,9 +373,14 @@ class BookParcelView extends StatelessWidget {
                                 focusColor: Colors.white,
                                 filled: true,
                                 suffixIcon: Padding(
-                                  padding: const EdgeInsets.all(10.0),
-                                  child: SvgPicture.asset(
-                                    "assets/icon/ic_currency_usd.svg",
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Text(
+                                    'MAD',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: themeChange.isDarkTheme() ? AppThemData.grey400 : AppThemData.grey600,
+                                    ),
                                   ),
                                 ),
                                 border:
@@ -405,20 +411,21 @@ class BookParcelView extends StatelessWidget {
                             const SizedBox(height: 4),
                             Visibility(
                                 visible: controller.isEstimatePriceVisible.value,
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: themeChange.isDarkTheme() ? AppThemData.secondary900 : AppThemData.secondary100),
-                                  child: Text(
-                                    'Recommended Price For this Ride ${Constant.amountToShow(amount: double.parse(controller.estimatePrice.value.toString()).toString())}',
-                                    style: GoogleFonts.inter(
-                                      textStyle: TextStyle(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // Consistent spacing: 12, 6
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8), // Consistent border radius
+                                      color: themeChange.isDarkTheme() ? AppThemData.secondary900 : AppThemData.secondary100,
+                                    ),
+                                    child: Text(
+                                      'Recommended Price: ${CurrencyFormatter.formatMoneyMAD(controller.estimatePrice.value)}',
+                                      style: GoogleFonts.inter(
                                         color: AppThemData.secondary500,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
+                                        fontSize: 13, // Consistent font size
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                  ),
-                                )),
+                                  )),
                             const SizedBox(height: 20),
                             Text(
                               'Select Vehicle'.tr,
@@ -555,8 +562,8 @@ class BookParcelView extends StatelessWidget {
                               child: RoundShapeButton(
                                   size: const Size(200, 45),
                                   title: "Next".tr,
-                                  buttonColor: AppThemData.primary500,
-                                  buttonTextColor: AppThemData.black,
+                                  buttonColor: AppThemData.black,
+                                  buttonTextColor: AppThemData.white,
                                   onTap: () {
                                     if (controller.dropLocationController.value.text.isEmpty || controller.dropLocationController.value.text == '') {
                                       return ShowToastDialog.toast('Please Enter Destination Location'.tr);

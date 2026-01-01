@@ -30,7 +30,14 @@ class GlobalSettingController extends GetxController {
       if (value != null) {
         Constant.currencyModel = value;
       } else {
-        Constant.currencyModel = CurrencyModel(id: "", code: "USD", decimalDigits: 2, active: true, name: "US Dollar", symbol: "\$", symbolAtRight: false);
+        Constant.currencyModel = CurrencyModel(
+            id: "",
+            code: "USD",
+            decimalDigits: 2,
+            active: true,
+            name: "US Dollar",
+            symbol: "\$",
+            symbolAtRight: false);
       }
     });
     await FireStoreUtils().getSettings();
@@ -41,7 +48,7 @@ class GlobalSettingController extends GetxController {
   Future<void> getVehicleTypeList() async {
     await FireStoreUtils.getVehicleType().then((value) {
       Constant.vehicleTypeList = value;
-        });
+    });
   }
 
   Future<void> getInterCityService() async {
@@ -55,26 +62,34 @@ class GlobalSettingController extends GetxController {
 
   void notificationInit() {
     notificationService.initInfo().then((value) async {
-      String token = await NotificationService.getToken();
-      log(":::::::TOKEN:::::: $token");
-      if (FirebaseAuth.instance.currentUser != null) {
-        final uid = FireStoreUtils.getCurrentUid();
-        final userModel = await FireStoreUtils.getUserProfile(uid);
-        if (userModel != null) {
-          if (userModel.fcmToken != token) {
-            userModel.fcmToken = token;
-            Constant.userModel = userModel;
-            await FireStoreUtils.updateUser(userModel);
-          } else {
-            Constant.userModel = userModel;
+      try {
+        String token = await NotificationService.getToken();
+        log(":::::::TOKEN:::::: $token");
+        if (FirebaseAuth.instance.currentUser != null) {
+          final uid = FireStoreUtils.getCurrentUid();
+          if (uid != null) {
+            final userModel = await FireStoreUtils.getUserProfile(uid);
+            if (userModel != null) {
+              if (userModel.fcmToken != token) {
+                userModel.fcmToken = token;
+                Constant.userModel = userModel;
+                await FireStoreUtils.updateUser(userModel);
+              } else {
+                Constant.userModel = userModel;
+              }
+            }
           }
         }
+      } catch (e) {
+        log("notificationInit error: $e");
       }
     });
   }
 
   Future<void> getLanguage() async {
-    if (Preferences.getString(Preferences.languageCodeKey).toString().isNotEmpty) {
+    if (Preferences.getString(Preferences.languageCodeKey)
+        .toString()
+        .isNotEmpty) {
       LanguageModel languageModel = await Constant.getLanguage();
       LocalizationService().changeLocale(languageModel.code.toString());
     } else {

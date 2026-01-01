@@ -1,8 +1,12 @@
+import 'package:customer/app/models/restaurant_model.dart';
 import 'package:customer/app/routes/app_pages.dart';
 import 'package:customer/theme/app_them_data.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../controllers/food_controller.dart';
 
@@ -25,6 +29,19 @@ class FoodView extends GetView<FoodController> {
                 child: _buildHeader(context),
               ),
             ),
+            Obx(() {
+              if (controller.loading.isTrue) {
+                return const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                );
+              }
+              return const SliverToBoxAdapter(child: SizedBox.shrink());
+            }),
             SliverToBoxAdapter(
               child: _buildChipRow(_categoryFilters),
             ),
@@ -38,21 +55,27 @@ class FoodView extends GetView<FoodController> {
             SliverToBoxAdapter(
               child: _buildSection(
                 title: 'Featured on Dinevio',
-                child: _buildFeaturedSlider(_featuredStores),
+                child: Obx(() {
+                  if (controller.featured.isNotEmpty) {
+                    return _buildFeaturedSlider(controller.featured);
+                  } else {
+                    return _buildFeaturedSliderFromStoreItems(_featuredStores);
+                  }
+                }),
               ),
             ),
             SliverToBoxAdapter(child: _sectionDivider()),
             SliverToBoxAdapter(
               child: _buildSection(
                 title: 'Top 10 local spots',
-                child: _buildFeaturedSlider(_localSpots),
+                child: Obx(() => _buildFeaturedSlider(controller.top10)),
               ),
             ),
             SliverToBoxAdapter(child: _sectionDivider()),
             SliverToBoxAdapter(
               child: _buildSection(
                 title: 'Stores near you',
-                child: _buildStoresSlider(_nearbyStores),
+                child: Obx(() => _buildStoresSlider(controller.nearby)),
               ),
             ),
             SliverToBoxAdapter(child: _sectionDivider()),
@@ -66,7 +89,7 @@ class FoodView extends GetView<FoodController> {
             SliverToBoxAdapter(
               child: _buildSection(
                 title: 'Top offers on items',
-                child: _buildTopItemsSlider(_topItems),
+                child: _buildTopItemsSlider(_sampleMenu),
               ),
             ),
             SliverToBoxAdapter(child: const SizedBox(height: 32)),
@@ -89,7 +112,8 @@ class FoodView extends GetView<FoodController> {
                     borderRadius: BorderRadius.circular(16),
                     onTap: () => Get.toNamed(Routes.SELECT_LOCATION),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -105,7 +129,8 @@ class FoodView extends GetView<FoodController> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.place_outlined, size: 18, color: Colors.black87),
+                          const Icon(Icons.place_outlined,
+                              size: 18, color: Colors.black87),
                           const SizedBox(width: 6),
                           Text(
                             'Khémisset',
@@ -116,7 +141,8 @@ class FoodView extends GetView<FoodController> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.black87),
+                          const Icon(Icons.keyboard_arrow_down,
+                              size: 18, color: Colors.black87),
                         ],
                       ),
                     ),
@@ -126,22 +152,15 @@ class FoodView extends GetView<FoodController> {
             ),
             IconButton(
               onPressed: () {},
-              icon: const Icon(Icons.notifications_none_rounded, color: Colors.black87, size: 26),
+              icon: const Icon(Icons.notifications_none_rounded,
+                  color: Colors.black87, size: 26),
             ),
             IconButton(
               onPressed: () {},
-              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black87, size: 26),
+              icon: const Icon(Icons.shopping_cart_outlined,
+                  color: Colors.black87, size: 26),
             ),
           ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Dinevio',
-          style: GoogleFonts.inter(
-            fontSize: 32,
-            fontWeight: FontWeight.w800,
-            color: Colors.black,
-          ),
         ),
       ],
     );
@@ -179,7 +198,8 @@ class FoodView extends GetView<FoodController> {
                 ),
                 if (chip.hasDropdown) ...[
                   const SizedBox(width: 6),
-                  const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.black54),
+                  const Icon(Icons.keyboard_arrow_down,
+                      size: 18, color: Colors.black54),
                 ],
               ],
             ),
@@ -192,85 +212,136 @@ class FoodView extends GetView<FoodController> {
   }
 
   Widget _buildCategoryIcons() {
-    return SizedBox(
-      height: 118,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        scrollDirection: Axis.horizontal,
-        itemBuilder: (context, index) {
-          final item = _categories[index];
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.grey.shade300),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Image.asset(item.imagePath, fit: BoxFit.contain),
-                    ),
-                  ),
-                  if (item.badge != null)
-                    Positioned(
-                      bottom: -10,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final textScaleFactor = MediaQuery.textScaleFactorOf(context);
+        final itemWidth = (screenWidth * 0.22).clamp(70.0, 95.0);
+        final iconSize = (screenWidth * 0.08).clamp(28.0, 40.0);
+        
+        // Measure actual text height using TextPainter
+        final textStyle = GoogleFonts.inter(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: Colors.black87,
+          height: 1.2,
+        );
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: 'Supermarket', // Longest expected label
+            style: textStyle,
+          ),
+          textDirection: TextDirection.ltr,
+          textScaleFactor: textScaleFactor,
+          maxLines: 1,
+        );
+        textPainter.layout(maxWidth: itemWidth);
+        final measuredTextHeight = textPainter.size.height;
+        
+        // Calculate item height with safety margins
+        // Icon + spacing + text (measured) + extra padding for safety
+        var baseHeight = iconSize + 12 + measuredTextHeight + 8;
+        
+        // Adjust for text scaling: add extra space if scaleFactor > 1.2
+        if (textScaleFactor > 1.2) {
+          final scaleAdjustment = ((textScaleFactor - 1.2) * 14).clamp(8.0, 20.0);
+          baseHeight += scaleAdjustment;
+        }
+        
+        final itemHeight = baseHeight.clamp(90.0, 130.0);
+        
+        return SizedBox(
+          height: itemHeight,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            scrollDirection: Axis.horizontal,
+            itemBuilder: (context, index) {
+              final item = _categories[index];
+              return SizedBox(
+                width: itemWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.hardEdge, // Prevent overflow
+                      alignment: Alignment.topRight,
+                      children: [
+                        Container(
+                          width: iconSize,
+                          height: iconSize,
                           decoration: BoxDecoration(
-                            color: item.badgeColor ?? const Color(0xFF0DB473),
-                            borderRadius: BorderRadius.circular(14),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: Colors.grey.shade300),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          child: Text(
-                            item.badge!,
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                          child: Padding(
+                            padding: EdgeInsets.all(iconSize * 0.14),
+                            child: Image.asset(
+                              item.imagePath,
+                              fit: BoxFit.contain,
                             ),
                           ),
                         ),
+                        if (item.badge != null)
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: item.badgeColor ?? const Color(0xFF0DB473),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 20,
+                                minHeight: 18,
+                              ),
+                              child: Text(
+                                item.badge!,
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                textScaleFactor: 1.0, // Prevent badge text scaling
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: Text(
+                        item.title,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        style: textStyle,
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: 90,
-                child: Text(
-                  item.title,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
+                  ],
                 ),
-              ),
-            ],
-          );
-        },
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemCount: _categories.length,
-      ),
+              );
+            },
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            itemCount: _categories.length,
+          ),
+        );
+      },
     );
   }
 
@@ -299,7 +370,8 @@ class FoodView extends GetView<FoodController> {
                   shape: BoxShape.circle,
                   color: Colors.grey.shade100,
                 ),
-                child: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.black87),
+                child: const Icon(Icons.arrow_forward_ios_rounded,
+                    size: 16, color: Colors.black87),
               ),
             ],
           ),
@@ -310,7 +382,7 @@ class FoodView extends GetView<FoodController> {
     );
   }
 
-  Widget _buildFeaturedSlider(List<_StoreItem> items) {
+  Widget _buildFeaturedSlider(List<RestaurantModel> items) {
     return SizedBox(
       height: 260,
       child: ListView.separated(
@@ -320,7 +392,7 @@ class FoodView extends GetView<FoodController> {
         itemBuilder: (context, index) {
           final item = items[index];
           return GestureDetector(
-            onTap: () => _openRestaurant(item),
+            onTap: () => controller.openRestaurant(item),
             child: Container(
               width: 260,
               decoration: BoxDecoration(
@@ -339,11 +411,12 @@ class FoodView extends GetView<FoodController> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(18)),
                     child: Stack(
                       children: [
-                        Image.asset(
-                          item.imagePath,
+                        Image.network(
+                          item.coverImage,
                           width: 260,
                           height: 150,
                           fit: BoxFit.cover,
@@ -358,7 +431,133 @@ class FoodView extends GetView<FoodController> {
                               shape: BoxShape.circle,
                               color: Colors.white,
                             ),
-                            child: const Icon(Icons.favorite_border, color: Colors.black87),
+                            child: const Icon(Icons.favorite_border,
+                                color: Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+                    child: Text(
+                      item.name,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time,
+                            size: 16, color: Colors.black54),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${item.etaMin}-${item.etaMax} min',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text('•',
+                            style: TextStyle(color: Colors.black45)),
+                        const SizedBox(width: 6),
+                        Icon(Icons.star_rounded, size: 18, color: _starColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          item.rating.toString(),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+        padding: const EdgeInsets.only(left: 4, right: 4),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedSliderFromStoreItems(List<_StoreItem> items) {
+    return SizedBox(
+      height: 260,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return GestureDetector(
+            onTap: () {
+              Get.snackbar('Restaurant', '${item.title} details');
+            },
+            child: Container(
+              width: 260,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(18)),
+                    child: Stack(
+                      children: [
+                        Image.asset(
+                          item.imagePath,
+                          width: 260,
+                          height: 150,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 260,
+                              height: 150,
+                              color: Colors.grey.shade300,
+                              child: Center(
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  size: 48,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                            ),
+                            child: const Icon(Icons.favorite_border,
+                                color: Colors.black87),
                           ),
                         ),
                       ],
@@ -379,10 +578,11 @@ class FoodView extends GetView<FoodController> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Row(
                       children: [
-                        const Icon(Icons.access_time, size: 16, color: Colors.black54),
+                        const Icon(Icons.access_time,
+                            size: 16, color: Colors.black54),
                         const SizedBox(width: 4),
                         Text(
-                          item.meta,
+                          item.meta.split('•')[1].trim(),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -390,7 +590,8 @@ class FoodView extends GetView<FoodController> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Text('•', style: TextStyle(color: Colors.black45)),
+                        const Text('•',
+                            style: TextStyle(color: Colors.black45)),
                         const SizedBox(width: 6),
                         Icon(Icons.star_rounded, size: 18, color: _starColor),
                         const SizedBox(width: 4),
@@ -415,7 +616,7 @@ class FoodView extends GetView<FoodController> {
     );
   }
 
-  Widget _buildStoresSlider(List<_StoreLogoItem> stores) {
+  Widget _buildStoresSlider(List<RestaurantModel> stores) {
     return SizedBox(
       height: 160,
       child: ListView.separated(
@@ -442,14 +643,13 @@ class FoodView extends GetView<FoodController> {
                   ],
                 ),
                 child: ClipOval(
-                  child: Image.asset(item.imagePath, fit: BoxFit.cover),
-                ),
+                    child: Image.network(item.brandLogo, fit: BoxFit.cover)),
               ),
               const SizedBox(height: 10),
               SizedBox(
                 width: 100,
                 child: Text(
-                  item.title,
+                  item.name,
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -462,7 +662,7 @@ class FoodView extends GetView<FoodController> {
               ),
               const SizedBox(height: 4),
               Text(
-                item.meta,
+                '${item.etaMin}-${item.etaMax} min',
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -498,7 +698,8 @@ class FoodView extends GetView<FoodController> {
                     top: 12,
                     left: 12,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(12),
@@ -522,7 +723,7 @@ class FoodView extends GetView<FoodController> {
     );
   }
 
-  Widget _buildTopItemsSlider(List<_TopItem> items) {
+  Widget _buildTopItemsSlider(List<_MenuItem> items) {
     return SizedBox(
       height: 240,
       child: ListView.separated(
@@ -550,7 +751,8 @@ class FoodView extends GetView<FoodController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(18)),
                   child: Stack(
                     children: [
                       Image.asset(
@@ -558,27 +760,21 @@ class FoodView extends GetView<FoodController> {
                         width: 220,
                         height: 140,
                         fit: BoxFit.cover,
-                      ),
-                      if (item.badge != null)
-                        Positioned(
-                          top: 10,
-                          left: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.redAccent,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              item.badge!,
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 220,
+                            height: 140,
+                            color: Colors.grey.shade300,
+                            child: Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 48,
+                                color: Colors.grey.shade600,
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -602,23 +798,6 @@ class FoodView extends GetView<FoodController> {
                       Icon(Icons.star_rounded, size: 18, color: _starColor),
                       const SizedBox(width: 4),
                       Text(
-                        item.rating,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '•',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Colors.black45,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
                         item.price,
                         style: GoogleFonts.inter(
                           fontSize: 14,
@@ -638,10 +817,29 @@ class FoodView extends GetView<FoodController> {
   }
 
   Widget _buildBottomNav() {
+    // Track current active tab (Food screen is active by default)
+    final currentRoute = Get.currentRoute;
+    final isFoodActive = currentRoute == Routes.FOOD;
+    
     final items = [
-      _NavItem(icon: Icons.home_filled, label: 'Home', isActive: true, badge: null, onTap: () => Get.back()),
-      _NavItem(icon: Icons.location_on_outlined, label: 'Nearby', isActive: false, badge: null, onTap: () {}),
-      _NavItem(icon: Icons.search, label: 'Search', isActive: false, badge: null, onTap: () {}),
+      _NavItem(
+          icon: Icons.home_filled,
+          label: 'Home',
+          isActive: false, // Home is not active when on Food screen
+          badge: null,
+          onTap: () => Get.offAllNamed(Routes.HOME)), // Navigate to home and clear stack
+      _NavItem(
+          icon: Icons.location_on_outlined,
+          label: 'location', // Changed from 'Nearby' to 'location'
+          isActive: false,
+          badge: null,
+          onTap: () => _openLocationGPS()),
+      _NavItem(
+          icon: Icons.search,
+          label: 'Search',
+          isActive: false,
+          badge: null,
+          onTap: () => _openSearch()),
       _NavItem(
         icon: Icons.shopping_bag_outlined,
         label: 'Cart',
@@ -649,7 +847,12 @@ class FoodView extends GetView<FoodController> {
         badge: controller.cart.isEmpty ? null : '${controller.cart.length}',
         onTap: () => _openCart(),
       ),
-      _NavItem(icon: Icons.person_outline, label: 'Profile', isActive: false, badge: null, onTap: () {}),
+      _NavItem(
+          icon: Icons.person_outline,
+          label: 'Profile',
+          isActive: false,
+          badge: null,
+          onTap: () => Get.toNamed(Routes.PROFILE_SCREEN)),
     ];
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
@@ -681,13 +884,19 @@ class FoodView extends GetView<FoodController> {
                             width: 50,
                             height: 50,
                             decoration: BoxDecoration(
-                              color: item.isActive ? Colors.white : const Color(0xFFF5F5F5),
+                              color: item.isActive
+                                  ? const Color(0xFF7E57C2) // Purple background for active
+                                  : const Color(0xFFF5F5F5),
                               shape: BoxShape.circle,
-                              border: item.isActive ? Border.all(color: Colors.black, width: 1.2) : null,
+                              border: item.isActive
+                                  ? Border.all(color: const Color(0xFF7E57C2), width: 2)
+                                  : null,
                             ),
                             child: Icon(
                               item.icon,
-                              color: Colors.black87,
+                              color: item.isActive
+                                  ? Colors.white // White icon for active purple background
+                                  : Colors.black87,
                               size: 26,
                             ),
                           ),
@@ -696,7 +905,8 @@ class FoodView extends GetView<FoodController> {
                               top: -4,
                               right: -4,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: Colors.green.shade700,
                                   borderRadius: BorderRadius.circular(10),
@@ -719,7 +929,9 @@ class FoodView extends GetView<FoodController> {
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: Colors.black87,
+                          color: item.isActive
+                              ? const Color(0xFF7E57C2) // Purple text for active
+                              : Colors.black87,
                         ),
                       ),
                     ],
@@ -808,22 +1020,6 @@ class _BannerCard {
   });
 }
 
-class _TopItem {
-  final String imagePath;
-  final String title;
-  final String price;
-  final String rating;
-  final String? badge;
-
-  const _TopItem({
-    required this.imagePath,
-    required this.title,
-    required this.price,
-    required this.rating,
-    this.badge,
-  });
-}
-
 class _NavItem {
   final IconData icon;
   final String label;
@@ -854,6 +1050,96 @@ void _openCart() {
   Get.to(() => _CartPage());
 }
 
+/// Open Google Maps with GPS location
+Future<void> _openLocationGPS() async {
+  try {
+    // Request location permission
+    final status = await Permission.location.request();
+    if (!status.isGranted) {
+      Get.snackbar(
+        'Permission Required',
+        'Location permission is needed to open GPS',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // Get current location
+    final position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    // Open Google Maps with current location
+    final url = 'https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}';
+    final uri = Uri.parse(url);
+    
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      Get.snackbar(
+        'Error',
+        'Could not open Google Maps',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  } catch (e) {
+    Get.snackbar(
+      'Error',
+      'Failed to get location: ${e.toString()}',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
+  }
+}
+
+/// Open search functionality
+void _openSearch() {
+  // For now, show a search dialog or navigate to search screen
+  // You can implement a full search screen later
+  showDialog(
+    context: Get.context!,
+    builder: (context) => AlertDialog(
+      title: Text('Search', style: GoogleFonts.inter()),
+      content: TextField(
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: 'Search restaurants, food...',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        onSubmitted: (value) {
+          // Implement search logic here
+          Get.back();
+          Get.snackbar(
+            'Search',
+            'Searching for: $value',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Get.back(),
+          child: Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            // Implement search
+            Get.back();
+          },
+          child: Text('Search'),
+        ),
+      ],
+    ),
+  );
+}
+
 class _RestaurantDetailPage extends GetView<FoodController> {
   final _StoreItem store;
   final List<_MenuItem> menu;
@@ -875,9 +1161,16 @@ class _RestaurantDetailPage extends GetView<FoodController> {
               onPressed: () => Get.back(),
             ),
             actions: [
-              IconButton(onPressed: () {}, icon: const Icon(Icons.search, color: Colors.black87)),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.favorite_border, color: Colors.black87)),
-              IconButton(onPressed: () => _openCart(), icon: const Icon(Icons.more_vert, color: Colors.black87)),
+              IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.search, color: Colors.black87)),
+              IconButton(
+                  onPressed: () {},
+                  icon:
+                      const Icon(Icons.favorite_border, color: Colors.black87)),
+              IconButton(
+                  onPressed: () => _openCart(),
+                  icon: const Icon(Icons.more_vert, color: Colors.black87)),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Image.asset(store.imagePath, fit: BoxFit.cover),
@@ -893,16 +1186,23 @@ class _RestaurantDetailPage extends GetView<FoodController> {
                     children: [
                       Text(
                         store.title,
-                        style: GoogleFonts.inter(fontSize: 30, fontWeight: FontWeight.w800, color: Colors.black),
+                        style: GoogleFonts.inter(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black),
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      _pill(text: '-50% some items', icon: Icons.local_offer_outlined),
+                      _pill(
+                          text: '-50% some items',
+                          icon: Icons.local_offer_outlined),
                       const SizedBox(width: 8),
-                      _pill(text: '${store.rating} (1k+)', icon: Icons.thumb_up_alt_outlined),
+                      _pill(
+                          text: '${store.rating} (1k+)',
+                          icon: Icons.thumb_up_alt_outlined),
                       const SizedBox(width: 8),
                       _pill(text: '10-20\'', icon: Icons.access_time),
                       const SizedBox(width: 8),
@@ -964,7 +1264,8 @@ class _RestaurantDetailPage extends GetView<FoodController> {
           ],
           Text(
             text,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.black),
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700, color: Colors.black),
           ),
         ],
       ),
@@ -977,14 +1278,17 @@ class _RestaurantDetailPage extends GetView<FoodController> {
       itemBuilder: (_, index) {
         final item = menu[index % menu.length];
         return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
           leading: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.asset(item.imagePath, width: 80, height: 80, fit: BoxFit.cover),
+            child: Image.asset(item.imagePath,
+                width: 80, height: 80, fit: BoxFit.cover),
           ),
           title: Text(
             item.title,
-            style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black),
+            style: GoogleFonts.inter(
+                fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black),
           ),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 6),
@@ -1002,7 +1306,10 @@ class _RestaurantDetailPage extends GetView<FoodController> {
                   ),
                 Text(
                   item.price,
-                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black),
+                  style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black),
                 ),
               ],
             ),
@@ -1089,9 +1396,12 @@ class _ProductSheetState extends State<_ProductSheet> {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<FoodController>();
-    final priceDouble = double.tryParse(widget.item.price.split(' ').first.replaceAll(',', '.')) ?? 0;
+    final priceDouble = double.tryParse(
+            widget.item.price.split(' ').first.replaceAll(',', '.')) ??
+        0;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1102,7 +1412,9 @@ class _ProductSheetState extends State<_ProductSheet> {
               child: Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(20)),
               ),
             ),
             const SizedBox(height: 12),
@@ -1113,7 +1425,10 @@ class _ProductSheetState extends State<_ProductSheet> {
                   Expanded(
                     child: Text(
                       widget.item.title,
-                      style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black),
+                      style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black),
                     ),
                   ),
                   IconButton(
@@ -1125,23 +1440,30 @@ class _ProductSheetState extends State<_ProductSheet> {
             ),
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Image.asset(widget.item.imagePath, height: 220, width: double.infinity, fit: BoxFit.cover),
+              child: Image.asset(widget.item.imagePath,
+                  height: 220, width: double.infinity, fit: BoxFit.cover),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Text(
                 widget.item.price,
-                style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.black),
+                style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black),
               ),
             ),
-            _sectionTitle('Choisissez votre boisson', requiredLabel: 'Required'),
+            _sectionTitle('Choisissez votre boisson',
+                requiredLabel: 'Required'),
             ...drinks.map(
               (d) => RadioListTile<String>(
                 activeColor: Colors.teal,
                 value: d,
                 groupValue: selectedDrink,
                 onChanged: (val) => setState(() => selectedDrink = val),
-                title: Text(d, style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.black)),
+                title: Text(d,
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700, color: Colors.black)),
               ),
             ),
             _sectionTitle('Personnalisez', requiredLabel: 'Optional'),
@@ -1157,7 +1479,9 @@ class _ProductSheetState extends State<_ProductSheet> {
                     }
                   });
                 },
-                title: Text(c, style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.black)),
+                title: Text(c,
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700, color: Colors.black)),
               ),
             ),
             Padding(
@@ -1172,10 +1496,13 @@ class _ProductSheetState extends State<_ProductSheet> {
                     child: Row(
                       children: [
                         IconButton(
-                          onPressed: () => setState(() => qty = qty > 1 ? qty - 1 : 1),
+                          onPressed: () =>
+                              setState(() => qty = qty > 1 ? qty - 1 : 1),
                           icon: const Icon(Icons.remove),
                         ),
-                        Text('$qty', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+                        Text('$qty',
+                            style:
+                                GoogleFonts.inter(fontWeight: FontWeight.w800)),
                         IconButton(
                           onPressed: () => setState(() => qty += 1),
                           icon: const Icon(Icons.add),
@@ -1187,8 +1514,10 @@ class _ProductSheetState extends State<_ProductSheet> {
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18)),
                     ),
                     onPressed: () {
                       controller.addToCart(
@@ -1198,7 +1527,8 @@ class _ProductSheetState extends State<_ProductSheet> {
                           price: priceDouble,
                           quantity: qty,
                           options: [
-                            if (selectedDrink != null) 'Boisson: $selectedDrink',
+                            if (selectedDrink != null)
+                              'Boisson: $selectedDrink',
                             ...selectedCustom.map((e) => e),
                           ],
                         ),
@@ -1208,7 +1538,8 @@ class _ProductSheetState extends State<_ProductSheet> {
                     },
                     child: Text(
                       'Add $qty for ${widget.item.price}',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white),
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w800, color: Colors.white),
                     ),
                   ),
                 ],
@@ -1228,7 +1559,8 @@ class _ProductSheetState extends State<_ProductSheet> {
         children: [
           Text(
             title,
-            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.black),
+            style: GoogleFonts.inter(
+                fontSize: 16, fontWeight: FontWeight.w800, color: Colors.black),
           ),
           if (requiredLabel != null) ...[
             const SizedBox(width: 8),
@@ -1240,7 +1572,10 @@ class _ProductSheetState extends State<_ProductSheet> {
               ),
               child: Text(
                 requiredLabel,
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black87),
+                style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87),
               ),
             ),
           ]
@@ -1261,13 +1596,17 @@ class _CartPage extends GetView<FoodController> {
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
           onPressed: () => Get.back(),
         ),
-        title: Text('Cart', style: GoogleFonts.inter(color: Colors.black, fontWeight: FontWeight.w800)),
+        title: Text('Cart',
+            style: GoogleFonts.inter(
+                color: Colors.black, fontWeight: FontWeight.w800)),
         centerTitle: true,
       ),
       body: Obx(() {
         if (controller.cart.isEmpty) {
           return Center(
-            child: Text('Your cart is empty', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.black54)),
+            child: Text('Your cart is empty',
+                style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700, color: Colors.black54)),
           );
         }
         final delivery = 12.0;
@@ -1303,23 +1642,32 @@ class _CartPage extends GetView<FoodController> {
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.fastfood, color: Colors.black87),
+                          child:
+                              const Icon(Icons.fastfood, color: Colors.black87),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.name, style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.black)),
+                              Text(item.name,
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.black)),
                               const SizedBox(height: 4),
-                              Text(item.options.join(', '), style: GoogleFonts.inter(color: Colors.black54)),
+                              Text(item.options.join(', '),
+                                  style:
+                                      GoogleFonts.inter(color: Colors.black54)),
                               const SizedBox(height: 6),
-                              Text('${item.price.toStringAsFixed(2)} MAD', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                              Text('${item.price.toStringAsFixed(2)} MAD',
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700)),
                             ],
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(14),
@@ -1328,7 +1676,9 @@ class _CartPage extends GetView<FoodController> {
                             children: [
                               const Icon(Icons.remove, size: 18),
                               const SizedBox(width: 8),
-                              Text('${item.quantity}', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+                              Text('${item.quantity}',
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w800)),
                               const SizedBox(width: 8),
                               const Icon(Icons.add, size: 18),
                             ],
@@ -1356,11 +1706,13 @@ class _CartPage extends GetView<FoodController> {
               ),
               child: Column(
                 children: [
-                  _summaryRow('Products', '${controller.cartSubtotal.toStringAsFixed(2)} MAD'),
+                  _summaryRow('Products',
+                      '${controller.cartSubtotal.toStringAsFixed(2)} MAD'),
                   _summaryRow('Delivery', '${delivery.toStringAsFixed(2)} MAD'),
                   _summaryRow('Services', '${service.toStringAsFixed(2)} MAD'),
                   const Divider(height: 18),
-                  _summaryRow('TOTAL', '${total.toStringAsFixed(2)} MAD', isBold: true),
+                  _summaryRow('TOTAL', '${total.toStringAsFixed(2)} MAD',
+                      isBold: true),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -1368,10 +1720,15 @@ class _CartPage extends GetView<FoodController> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                       ),
-                      onPressed: () => Get.to(() => _CheckoutPage(total: total)),
-                      child: Text('Pay to order', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white)),
+                      onPressed: () =>
+                          Get.to(() => _CheckoutPage(total: total)),
+                      child: Text('Pay to order',
+                          style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white)),
                     ),
                   ),
                 ],
@@ -1388,9 +1745,15 @@ class _CartPage extends GetView<FoodController> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Text(title, style: GoogleFonts.inter(fontWeight: isBold ? FontWeight.w800 : FontWeight.w600, color: Colors.black)),
+          Text(title,
+              style: GoogleFonts.inter(
+                  fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+                  color: Colors.black)),
           const Spacer(),
-          Text(value, style: GoogleFonts.inter(fontWeight: isBold ? FontWeight.w800 : FontWeight.w700, color: Colors.black)),
+          Text(value,
+              style: GoogleFonts.inter(
+                  fontWeight: isBold ? FontWeight.w800 : FontWeight.w700,
+                  color: Colors.black)),
         ],
       ),
     );
@@ -1412,13 +1775,19 @@ class _CheckoutPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
           onPressed: () => Get.back(),
         ),
-        title: Text('Checkout', style: GoogleFonts.inter(color: Colors.black, fontWeight: FontWeight.w800)),
+        title: Text('Checkout',
+            style: GoogleFonts.inter(
+                color: Colors.black, fontWeight: FontWeight.w800)),
         centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Delivery address', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black)),
+          Text('Delivery address',
+              style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black)),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(12),
@@ -1431,19 +1800,29 @@ class _CheckoutPage extends StatelessWidget {
                 const Icon(Icons.place_outlined, color: Colors.black87),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Auto-detected via GPS', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.black87)),
+                  child: Text('Auto-detected via GPS',
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w700, color: Colors.black87)),
                 ),
                 const Icon(Icons.chevron_right),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          Text('Delivery options', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black)),
+          Text('Delivery options',
+              style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black)),
           const SizedBox(height: 10),
           _radioTile('Standard 15-25 min', 'delivery_time', true),
           _radioTile('Schedule (select time)', 'delivery_time', false),
           const SizedBox(height: 16),
-          Text('Payment method', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black)),
+          Text('Payment method',
+              style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black)),
           const SizedBox(height: 10),
           _radioTile('Cash on delivery', 'payment', true),
           _radioTile('Bank card', 'payment', false),
@@ -1462,10 +1841,13 @@ class _CheckoutPage extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
               ),
               onPressed: () {},
-              child: Text('Pay to order', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white)),
+              child: Text('Pay to order',
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w800, color: Colors.white)),
             ),
           ),
         ],
@@ -1485,7 +1867,9 @@ class _CheckoutPage extends StatelessWidget {
         groupValue: selected,
         onChanged: (_) {},
         activeColor: Colors.black,
-        title: Text(text, style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.black)),
+        title: Text(text,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700, color: Colors.black)),
       ),
     );
   }
@@ -1495,9 +1879,15 @@ class _CheckoutPage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Text(title, style: GoogleFonts.inter(fontWeight: isBold ? FontWeight.w800 : FontWeight.w700, color: Colors.black)),
+          Text(title,
+              style: GoogleFonts.inter(
+                  fontWeight: isBold ? FontWeight.w800 : FontWeight.w700,
+                  color: Colors.black)),
           const Spacer(),
-          Text(value, style: GoogleFonts.inter(fontWeight: isBold ? FontWeight.w800 : FontWeight.w700, color: Colors.black)),
+          Text(value,
+              style: GoogleFonts.inter(
+                  fontWeight: isBold ? FontWeight.w800 : FontWeight.w700,
+                  color: Colors.black)),
         ],
       ),
     );
@@ -1552,8 +1942,8 @@ const List<_ChipItem> _categoryFilters = [
 const List<_CategoryIcon> _categories = [
   _CategoryIcon(imagePath: "assets/food/pizza.png", title: "Pizza"),
   _CategoryIcon(imagePath: "assets/food/burger.png", title: "Explore"),
-  _CategoryIcon(imagePath: "assets/food/roast_chicken.png", title: "Chicken", badge: "150 MAD"),
-  _CategoryIcon(imagePath: "assets/food/carrefour.png", title: "Supermarket", badge: "%", badgeColor: Color(0xFF08B164)),
+  _CategoryIcon(imagePath: "assets/food/roast_chicken.png", title: "Chicken"),
+  _CategoryIcon(imagePath: "assets/food/carrefour.png", title: "Supermarket"),
   _CategoryIcon(imagePath: "assets/food/kfc.png", title: "KFC"),
   _CategoryIcon(imagePath: "assets/food/mcdonalds.png", title: "McDonald's"),
   _CategoryIcon(imagePath: "assets/food/pizza_hut.png", title: "Pizza Hut"),
@@ -1566,7 +1956,8 @@ const List<_CategoryIcon> _categories = [
 const List<_ChipItem> _filterChips = [
   _ChipItem(label: 'Pickup', icon: Icons.directions_walk),
   _ChipItem(label: 'Offers', icon: Icons.local_offer_outlined),
-  _ChipItem(label: 'Delivery fee', icon: Icons.delivery_dining, hasDropdown: true),
+  _ChipItem(
+      label: 'Delivery fee', icon: Icons.delivery_dining, hasDropdown: true),
   _ChipItem(label: 'Under 25 min', icon: Icons.access_time),
 ];
 
@@ -1646,35 +2037,10 @@ const List<_StoreLogoItem> _nearbyStores = [
 ];
 
 const List<_BannerCard> _dominosBanners = [
-  _BannerCard(imagePath: "assets/dominos_pizza/dominos_pizza1.jpeg", title: "Domino's Pizza"),
-  _BannerCard(imagePath: "assets/dominos_pizza/dominos_pizza2.jpeg", title: "Domino's Pizza"),
+  _BannerCard(
+      imagePath: "assets/dominos_pizza/dominos_pizza1.jpeg",
+      title: "Domino's Pizza"),
+  _BannerCard(
+      imagePath: "assets/dominos_pizza/dominos_pizza2.jpeg",
+      title: "Domino's Pizza"),
 ];
-
-const List<_TopItem> _topItems = [
-  _TopItem(
-    imagePath: "assets/top_items/burger_mcdonalds.jpg",
-    title: "Best of big tasty",
-    price: "81 DH",
-    rating: "4.6",
-    badge: "Buy 1, get 1",
-  ),
-  _TopItem(
-    imagePath: "assets/top_items/dominos_pizza.jpg",
-    title: "Margarita small pizza",
-    price: "43 DH",
-    rating: "4.5",
-  ),
-  _TopItem(
-    imagePath: "assets/top_items/tacos_de_nice.jpg",
-    title: "Tacos only compound",
-    price: "65 DH",
-    rating: "4.7",
-  ),
-  _TopItem(
-    imagePath: "assets/top_items/pizza_hut.jpg",
-    title: "Perfect Pizza Dough",
-    price: "72 DH",
-    rating: "4.6",
-  ),
-];
-

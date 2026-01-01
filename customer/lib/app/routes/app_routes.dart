@@ -37,6 +37,22 @@ abstract class Routes {
   static const INTERCITY_RIDE = _Paths.INTERCITY_RIDE;
   static const PARCEL_RIDE = _Paths.PARCEL_RIDE;
   static const FOOD = _Paths.FOOD;
+  static const INTERCITY_PARCEL = _Paths.INTERCITY_PARCEL;
+  static const INTERCITY_PARCEL_CONFIRMATION = _Paths.INTERCITY_PARCEL_CONFIRMATION;
+  static const ONBOARDING_LOGIN = _Paths.ONBOARDING_LOGIN;
+  static const PHONE_LOGIN = _Paths.PHONE_LOGIN;
+  static const PROFILE_SCREEN = _Paths.PROFILE_SCREEN;
+  static const CHECKOUT = _Paths.CHECKOUT;
+  static const PARA_CART = _Paths.PARA_CART;
+  static const PARA_CHECKOUT = _Paths.PARA_CHECKOUT;
+  static const PARA_ORDERS = _Paths.PARA_ORDERS;
+  static const PARA_ORDER_DETAILS = _Paths.PARA_ORDER_DETAILS;
+  static const PARA_SHOP_DETAILS = _Paths.PARA_SHOP_DETAILS;
+  static const SETTINGS = _Paths.SETTINGS;
+  static const WALLET = _Paths.WALLET;
+  static const ADD_PAYMENT_METHOD = _Paths.ADD_PAYMENT_METHOD;
+  static const PERSONAL_INFO = _Paths.PERSONAL_INFO;
+  static const CHATBOT = _Paths.CHATBOT;
 }
 
 abstract class _Paths {
@@ -73,4 +89,20 @@ abstract class _Paths {
   static const PARCEL_RIDE = '/parcel-ride';
   static const TRACK_PARCEL_RIDE_SCREEN = '/track-parcel-ride';
   static const FOOD = '/food';
+  static const INTERCITY_PARCEL = '/intercity-parcel';
+  static const INTERCITY_PARCEL_CONFIRMATION = '/intercity-parcel-confirmation';
+  static const ONBOARDING_LOGIN = '/onboarding-login';
+  static const PHONE_LOGIN = '/phone-login';
+  static const PROFILE_SCREEN = '/profile-screen';
+  static const CHECKOUT = '/checkout';
+  static const PARA_CART = '/para-cart';
+  static const PARA_CHECKOUT = '/para-checkout';
+  static const PARA_ORDERS = '/para-orders';
+  static const PARA_ORDER_DETAILS = '/para-order-details';
+  static const PARA_SHOP_DETAILS = '/para-shop-details';
+  static const SETTINGS = '/settings';
+  static const WALLET = '/wallet';
+  static const ADD_PAYMENT_METHOD = '/add-payment-method';
+  static const PERSONAL_INFO = '/personal-info';
+  static const CHATBOT = '/chatbot';
 }

@@ -86,7 +86,17 @@ class BookParcelController extends GetxController {
 
   @override
   void onInit() {
-    vehicleTypeModel.value =  vehicleTypeList[0];
+    // Defensive check: ensure vehicleTypeList is not empty before accessing [0]
+    if (vehicleTypeList.isNotEmpty) {
+      vehicleTypeModel.value = vehicleTypeList[0];
+    } else {
+      // Handle empty list case - set a default or show error
+      log("Warning: vehicleTypeList is empty. Cannot set default vehicle type.");
+      isLoading.value = false;
+      ShowToastDialog.showToast("Vehicle types not available. Please try again later.");
+      return;
+    }
+    
     if (Constant.taxList == null || Constant.taxList!.isEmpty) {
       getTax();
     } else {
@@ -132,6 +142,18 @@ class BookParcelController extends GetxController {
 
   ChargesModel? calculationOfEstimatePrice() {
     if (selectedTime.value != 'Select Time' && selectedTime.value.isNotEmpty) {
+      // Defensive check: ensure parcelDocuments list is not empty before accessing .first
+      if (Constant.parcelDocuments.isEmpty) {
+        log("Warning: parcelDocuments list is empty. Cannot calculate estimate price.");
+        return null;
+      }
+      
+      // Defensive check: ensure timeSlots list is not empty
+      if (Constant.parcelDocuments.first.timeSlots.isEmpty) {
+        log("Warning: timeSlots list is empty. Cannot calculate estimate price.");
+        return null;
+      }
+      
       DateTime selectedDateTime = convertToDateTime(selectedTime.value);
       for (var model in Constant.parcelDocuments.first.timeSlots) {
         if (isTimeInRange(selectedDateTime, model.timeSlot)) {
@@ -237,12 +259,34 @@ class BookParcelController extends GetxController {
   }
 
   Future<void> getData() async {
-    currentLocationPosition = await Utils.getCurrentLocation();
-    Constant.country =
-        (await placemarkFromCoordinates(currentLocationPosition!.latitude, currentLocationPosition!.longitude))[0].country ?? 'Unknown';
-    sourceLocation = LatLng(currentLocationPosition!.latitude, currentLocationPosition!.longitude);
-
-    isLoading.value = false;
+    try {
+      currentLocationPosition = await Utils.getCurrentLocation();
+      
+      // Defensive check: ensure placemarkFromCoordinates returns non-empty list before accessing [0]
+      final placemarks = await placemarkFromCoordinates(
+        currentLocationPosition!.latitude,
+        currentLocationPosition!.longitude,
+      );
+      
+      if (placemarks.isNotEmpty) {
+        Constant.country = placemarks[0].country ?? 'Unknown';
+      } else {
+        log("Warning: placemarkFromCoordinates returned empty list");
+        Constant.country = 'Unknown';
+      }
+      
+      sourceLocation = LatLng(currentLocationPosition!.latitude, currentLocationPosition!.longitude);
+    } catch (e, stackTrace) {
+      log("Error in getData: $e");
+      log("Stack trace: $stackTrace");
+      Constant.country = 'Unknown';
+      // Set default location if current location fails
+      if (currentLocationPosition != null) {
+        sourceLocation = LatLng(currentLocationPosition!.latitude, currentLocationPosition!.longitude);
+      }
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   Future<void> saveParcelData() async {
@@ -328,10 +372,37 @@ class BookParcelController extends GetxController {
   }
 
   String distanceCalculate(MapModel? value) {
-    if (Constant.distanceType == "Km") {
-      return (value!.rows!.first.elements!.first.distance!.value!.toInt() / 1000).toString();
-    } else {
-      return (value!.rows!.first.elements!.first.distance!.value!.toInt() / 1609.34).toString();
+    // Defensive check: ensure value, rows, elements, and distance are not null/empty
+    if (value == null) {
+      log("Warning: MapModel is null in distanceCalculate");
+      return "0";
+    }
+    
+    if (value.rows == null || value.rows!.isEmpty) {
+      log("Warning: MapModel.rows is null or empty in distanceCalculate");
+      return "0";
+    }
+    
+    if (value.rows!.first.elements == null || value.rows!.first.elements!.isEmpty) {
+      log("Warning: MapModel.rows.first.elements is null or empty in distanceCalculate");
+      return "0";
+    }
+    
+    final distance = value.rows!.first.elements!.first.distance;
+    if (distance == null || distance.value == null) {
+      log("Warning: distance or distance.value is null in distanceCalculate");
+      return "0";
+    }
+    
+    try {
+      if (Constant.distanceType == "Km") {
+        return (distance.value!.toInt() / 1000).toStringAsFixed(2);
+      } else {
+        return (distance.value!.toInt() / 1609.34).toStringAsFixed(2);
+      }
+    } catch (e) {
+      log("Error calculating distance: $e");
+      return "0";
     }
   }
 }

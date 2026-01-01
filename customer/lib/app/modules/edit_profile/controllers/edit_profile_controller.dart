@@ -12,8 +12,11 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 class EditProfileController extends GetxController {
-  RxString profileImage = "https://firebasestorage.googleapis.com/v0/b/mytaxi-a8627.appspot.com/o/constant_assets%2F59.png?alt=media&token=a0b1aebd-9c01-45f6-9569-240c4bc08e23".obs;
-  TextEditingController countryCodeController = TextEditingController(text: '+91');
+  RxString profileImage =
+      "https://firebasestorage.googleapis.com/v0/b/mytaxi-a8627.appspot.com/o/constant_assets%2F59.png?alt=media&token=a0b1aebd-9c01-45f6-9569-240c4bc08e23"
+          .obs;
+  TextEditingController countryCodeController =
+      TextEditingController(text: '+91');
   TextEditingController phoneNumberController = TextEditingController();
   TextEditingController nameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
@@ -39,30 +42,36 @@ class EditProfileController extends GetxController {
   }
 
   Future<void> getUserData() async {
-    final userModel = await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid());
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+    final userModel = await FireStoreUtils.getUserProfile(uid);
     if (userModel != null) {
       profileImage.value = (userModel.profilePic ?? '').isNotEmpty
           ? userModel.profilePic!
           : "https://firebasestorage.googleapis.com/v0/b/mytaxi-a8627.appspot.com/o/constant_assets%2F59.png?alt=media&token=a0b1aebd-9c01-45f6-9569-240c4bc08e23";
       name.value = userModel.fullName ?? '';
       nameController.text = userModel.fullName ?? '';
-      phoneNumber.value = (userModel.countryCode ?? '') + (userModel.phoneNumber ?? '');
+      phoneNumber.value =
+          (userModel.countryCode ?? '') + (userModel.phoneNumber ?? '');
       phoneNumberController.text = userModel.phoneNumber ?? '';
       emailController.text = userModel.email ?? '';
     }
   }
 
   Future<void> saveUserData() async {
-    final userModel = await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid());
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+    final userModel = await FireStoreUtils.getUserProfile(uid);
     if (userModel == null) return;
     userModel.gender = selectedGender.value == 1 ? "Male" : "Female";
     userModel.fullName = nameController.text;
     userModel.slug = nameController.text.toSlug(delimiter: "-");
     ShowToastDialog.showLoader("Please wait".tr);
-    if (profileImage.value.isNotEmpty && !Constant().hasValidUrl(profileImage.value)) {
+    if (profileImage.value.isNotEmpty &&
+        !Constant().hasValidUrl(profileImage.value)) {
       profileImage.value = await Constant.uploadUserImageToFireStorage(
         File(profileImage.value),
-        "profileImage/${FireStoreUtils.getCurrentUid()}",
+        "profileImage/$uid",
         File(profileImage.value).path.split('/').last,
       );
     }
@@ -74,7 +83,8 @@ class EditProfileController extends GetxController {
 
   Future<void> pickFile({required ImageSource source}) async {
     try {
-      final image = await imagePicker.pickImage(source: source, imageQuality: 100);
+      final image =
+          await imagePicker.pickImage(source: source, imageQuality: 100);
       if (image == null) return;
       Get.back();
       final compressedBytes = await FlutterImageCompress.compressWithFile(

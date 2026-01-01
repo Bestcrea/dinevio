@@ -18,6 +18,27 @@ import 'package:customer/app/modules/track_parcel_ride_screen/bindings/track_par
 import 'package:customer/app/modules/track_parcel_ride_screen/views/track_parcel_ride_screen_view.dart';
 import 'package:customer/app/modules/food/bindings/food_binding.dart';
 import 'package:customer/app/modules/food/views/food_view.dart';
+import 'package:customer/app/modules/intercity_parcel/bindings/intercity_parcel_binding.dart';
+import 'package:customer/app/modules/intercity_parcel/views/intercity_parcel_view.dart';
+import 'package:customer/app/modules/intercity_parcel/views/intercity_parcel_confirmation_view.dart';
+import 'package:customer/app/modules/checkout/bindings/checkout_binding.dart';
+import 'package:customer/app/modules/checkout/views/checkout_screen.dart';
+import 'package:customer/features/para/presentation/pages/cart/para_cart_page.dart';
+import 'package:customer/features/para/presentation/pages/checkout/para_checkout_page.dart';
+import 'package:customer/features/para/presentation/pages/orders/para_order_details_page.dart';
+import 'package:customer/features/para/presentation/pages/orders/para_orders_page.dart';
+import 'package:customer/features/para/presentation/pages/shop/para_shop_details_page.dart';
+import 'package:customer/features/para/state/para_cart_controller.dart';
+import 'package:customer/features/para/state/para_checkout_controller.dart';
+import 'package:customer/features/para/state/para_orders_controller.dart';
+import 'package:customer/app/modules/settings/bindings/settings_binding.dart';
+import 'package:customer/app/modules/settings/views/settings_view.dart';
+import 'package:customer/app/modules/wallet/bindings/wallet_binding.dart';
+import 'package:customer/app/modules/wallet/views/wallet_page.dart';
+import 'package:customer/app/modules/personal_info/bindings/personal_info_binding.dart';
+import 'package:customer/app/modules/personal_info/views/personal_info_view.dart';
+import 'package:customer/app/modules/chatbot/bindings/chatbot_binding.dart';
+import 'package:customer/app/modules/chatbot/views/chatbot_view.dart';
 import 'package:get/get.dart';
 import '../modules/chat_screen/bindings/chat_screen_binding.dart';
 import '../modules/chat_screen/views/chat_screen_view.dart';
@@ -59,6 +80,10 @@ import '../modules/track_ride_screen/bindings/track_ride_screen_binding.dart';
 import '../modules/track_ride_screen/views/track_ride_screen_view.dart';
 import '../modules/verify_otp/bindings/verify_otp_binding.dart';
 import '../modules/verify_otp/views/verify_otp_view.dart';
+import '../../auth/onboarding_login_screen.dart';
+import '../../auth/phone_login_screen.dart';
+import '../modules/profile_screen/bindings/profile_screen_binding.dart';
+import '../modules/profile_screen/views/profile_screen_view.dart';
 
 // ignore_for_file: constant_identifier_names
 
@@ -224,6 +249,85 @@ class AppPages {
       name: _Paths.PARCEL_RIDE,
       page: () => const ParcelRidesView(),
       binding: ParcelRidesBinding(),
+    ),
+    GetPage(
+      name: _Paths.INTERCITY_PARCEL,
+      page: () => const IntercityParcelView(),
+      binding: IntercityParcelBinding(),
+    ),
+    GetPage(
+      name: _Paths.INTERCITY_PARCEL_CONFIRMATION,
+      page: () => const IntercityParcelConfirmationView(),
+      binding: IntercityParcelBinding(),
+    ),
+    GetPage(
+      name: _Paths.ONBOARDING_LOGIN,
+      page: () => const OnboardingLoginScreen(),
+    ),
+    GetPage(
+      name: _Paths.PHONE_LOGIN,
+      page: () => const PhoneLoginScreen(),
+    ),
+    GetPage(
+      name: _Paths.PROFILE_SCREEN,
+      page: () => const ProfileScreenView(),
+      binding: ProfileScreenBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: _Paths.CHECKOUT,
+      page: () => const CheckoutScreen(),
+      binding: CheckoutBinding(),
+    ),
+    // Para Cart & Checkout Routes
+    GetPage(
+      name: _Paths.PARA_CART,
+      page: () => const ParaCartPage(),
+      binding: BindingsBuilder(() => Get.lazyPut(() => ParaCartController())),
+    ),
+    GetPage(
+      name: _Paths.PARA_CHECKOUT,
+      page: () => const ParaCheckoutPage(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut(() => ParaCartController());
+        Get.lazyPut(() => ParaCheckoutController());
+      }),
+    ),
+    GetPage(
+      name: _Paths.PARA_ORDERS,
+      page: () => const ParaOrdersPage(),
+      binding: BindingsBuilder(() => Get.lazyPut(() => ParaOrdersController())),
+    ),
+    GetPage(
+      name: _Paths.PARA_ORDER_DETAILS,
+      page: () => const ParaOrderDetailsPage(),
+      binding: BindingsBuilder(() => Get.lazyPut(() => ParaOrdersController())),
+    ),
+    GetPage(
+      name: _Paths.PARA_SHOP_DETAILS,
+      page: () => const ParaShopDetailsPage(),
+      binding: BindingsBuilder(() => Get.lazyPut(() => ParaCartController())),
+    ),
+    GetPage(
+      name: _Paths.SETTINGS,
+      page: () => const SettingsView(),
+      binding: SettingsBinding(),
+    ),
+    GetPage(
+      name: _Paths.WALLET,
+      page: () => const WalletPage(),
+      binding: WalletBinding(),
+    ),
+    GetPage(
+      name: _Paths.PERSONAL_INFO,
+      page: () => const PersonalInfoView(),
+      binding: PersonalInfoBinding(),
+    ),
+    GetPage(
+      name: _Paths.CHATBOT,
+      page: () => const ChatbotView(),
+      binding: ChatbotBinding(),
     ),
   ];
 }

@@ -1,0 +1,194 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is the owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Helper function to check if document exists
+    function documentExists(path) {
+      return exists(path);
+    }
+    
+    // Helper function to get current timestamp
+    function currentTime() {
+      return request.time;
+    }
+    
+    // ============================================
+    // DEVELOPMENT RULES (Time-limited for testing)
+    // ============================================
+    // WARNING: These rules allow read/write access for testing
+    // Set expiration date: 2025-01-31 (30 days from now)
+    // Replace with production rules before this date!
+    
+    // Temporary dev rules - expires 2025-01-31
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2025, 1, 31);
+    }
+    
+    // ============================================
+    // PRODUCTION RULES (Uncomment after testing)
+    // ============================================
+    
+    // Users Collection
+    // match /users/{userId} {
+    //   // Users can read their own data
+    //   allow read: if isOwner(userId);
+    //   
+    //   // Users can create their own document
+    //   allow create: if isOwner(userId) && 
+    //                    request.resource.data.keys().hasAll(['id', 'createdAt']) &&
+    //                    request.resource.data.id == userId;
+    //   
+    //   // Users can update their own data (except id and createdAt)
+    //   allow update: if isOwner(userId) &&
+    //                    !('id' in request.resource.data.diff(resource.data).affectedKeys()) &&
+    //                    !('createdAt' in request.resource.data.diff(resource.data).affectedKeys());
+    //   
+    //   // Users can delete their own account
+    //   allow delete: if isOwner(userId);
+    //   
+    //   // Subcollections
+    //   match /sharing_persons/{personId} {
+    //     allow read, write: if isOwner(userId);
+    //   }
+    // }
+    
+    // Orders/Bookings Collection
+    // match /bookings/{bookingId} {
+    //   // Customers can read their own bookings
+    //   allow read: if isAuthenticated() && 
+    //                (resource.data.customerId == request.auth.uid ||
+    //                 resource.data.driverId == request.auth.uid);
+    //   
+    //   // Customers can create bookings
+    //   allow create: if isAuthenticated() &&
+    //                  request.resource.data.customerId == request.auth.uid &&
+    //                  request.resource.data.keys().hasAll(['customerId', 'bookingStatus', 'createAt']);
+    //   
+    //   // Customers can update their own bookings (limited fields)
+    //   allow update: if isAuthenticated() &&
+    //                  resource.data.customerId == request.auth.uid &&
+    //                  request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'cancelledBy', 'cancelledReason', 'updateAt']);
+    //   
+    //   // Drivers can update booking status and driverId
+    //   allow update: if isAuthenticated() &&
+    //                  resource.data.driverId == request.auth.uid &&
+    //                  request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'pickupTime', 'dropTime', 'updateAt']);
+    // }
+    
+    // Restaurants Collection
+    // match /Restaurant/{restaurantId} {
+    //   // Anyone can read restaurants
+    //   allow read: if true;
+    //   
+    //   // Only admins can write (add admin check)
+    //   allow write: if false; // Disable writes for now, add admin check later
+    //   
+    //   // Menu items subcollection
+    //   match /menus/{menuId} {
+    //     allow read: if true;
+    //     allow write: if false; // Admin only
+    //   }
+    // }
+    
+    // Drivers Collection
+    // match /drivers/{driverId} {
+    //   // Drivers can read their own data
+    //   allow read: if isOwner(driverId);
+    //   
+    //   // Drivers can create their own document
+    //   allow create: if isOwner(driverId) &&
+    //                  request.resource.data.id == driverId;
+    //   
+    //   // Drivers can update their own data
+    //   allow update: if isOwner(driverId);
+    // }
+    
+    // Parcels Collection
+    // match /parcel_ride/{parcelId} {
+    //   // Customers and drivers can read parcels
+    //   allow read: if isAuthenticated() &&
+    //                (resource.data.customerId == request.auth.uid ||
+    //                 resource.data.driverId == request.auth.uid);
+    //   
+    //   // Customers can create parcels
+    //   allow create: if isAuthenticated() &&
+    //                  request.resource.data.customerId == request.auth.uid;
+    //   
+    //   // Customers can update their own parcels
+    //   allow update: if isAuthenticated() &&
+    //                  resource.data.customerId == request.auth.uid;
+    //   
+    //   // Drivers can update parcels assigned to them
+    //   allow update: if isAuthenticated() &&
+    //                  resource.data.driverId == request.auth.uid;
+    // }
+    
+    // Intercity Rides Collection
+    // match /intercity_ride/{rideId} {
+    //   allow read: if isAuthenticated() &&
+    //                (resource.data.customerId == request.auth.uid ||
+    //                 resource.data.driverId == request.auth.uid);
+    //   
+    //   allow create: if isAuthenticated() &&
+    //                  request.resource.data.customerId == request.auth.uid;
+    //   
+    //   allow update: if isAuthenticated() &&
+    //                  (resource.data.customerId == request.auth.uid ||
+    //                   resource.data.driverId == request.auth.uid);
+    // }
+    
+    // Wallet Transactions
+    // match /wallet_transaction/{transactionId} {
+    //   // Users can read their own transactions
+    //   allow read: if isAuthenticated() &&
+    //                resource.data.userId == request.auth.uid;
+    //   
+    //   // System can create transactions (add server-side validation)
+    //   allow create: if isAuthenticated() &&
+    //                  request.resource.data.userId == request.auth.uid;
+    // }
+    
+    // Chat Collection
+    // match /chat/{chatId} {
+    //   allow read, write: if isAuthenticated() &&
+    //                       (resource.data.senderId == request.auth.uid ||
+    //                        resource.data.receiverId == request.auth.uid);
+    // }
+    
+    // Reviews Collection
+    // match /review/{reviewId} {
+    //   allow read: if true; // Anyone can read reviews
+    //   allow create: if isAuthenticated() &&
+    //                  request.resource.data.userId == request.auth.uid;
+    //   allow update, delete: if isAuthenticated() &&
+    //                          resource.data.userId == request.auth.uid;
+    // }
+    
+    // Settings Collection (Read-only for users)
+    // match /settings/{settingId} {
+    //   allow read: if true;
+    //   allow write: if false; // Admin only
+    // }
+    
+    // Notifications Collection
+    // match /notification/{notificationId} {
+    //   allow read: if isAuthenticated() &&
+    //                resource.data.userId == request.auth.uid;
+    //   allow create: if false; // Server-side only
+    //   allow update: if isAuthenticated() &&
+    //                  resource.data.userId == request.auth.uid;
+    // }
+  }
+}
+

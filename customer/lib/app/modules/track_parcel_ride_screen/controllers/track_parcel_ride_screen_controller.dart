@@ -133,28 +133,40 @@ class TrackParcelRideScreenController extends GetxController {
           polylineCoordinates.add(LatLng(point.latitude, point.longitude));
         }
       } else {
-        log(result.errorMessage.toString());
+        log("Warning: Polyline result has no points. Error: ${result.errorMessage}");
       }
 
+      // Defensive checks before adding markers
       // Only add the driver marker, comment out pickup and drop-off markers
-      addMarker(
-          latitude: bookingModel.value.pickUpLocation!.latitude,
-          longitude: bookingModel.value.pickUpLocation!.longitude,
-          id: "Departure",
-          descriptor: departureIcon!,
-          rotation: 0.0);
-      addMarker(
-          latitude: bookingModel.value.dropLocation!.latitude,
-          longitude: bookingModel.value.dropLocation!.longitude,
-          id: "Destination",
-          descriptor: destinationIcon!,
-          rotation: 0.0);
-      addMarker(
-          latitude: driverUserModel.value.location!.latitude,
-          longitude: driverUserModel.value.location!.longitude,
-          id: "Driver",
-          descriptor: driverIcon!,
-          rotation: driverUserModel.value.rotation);
+      if (bookingModel.value.pickUpLocation != null &&
+          departureIcon != null) {
+        addMarker(
+            latitude: bookingModel.value.pickUpLocation!.latitude,
+            longitude: bookingModel.value.pickUpLocation!.longitude,
+            id: "Departure",
+            descriptor: departureIcon!,
+            rotation: 0.0);
+      }
+      
+      if (bookingModel.value.dropLocation != null &&
+          destinationIcon != null) {
+        addMarker(
+            latitude: bookingModel.value.dropLocation!.latitude,
+            longitude: bookingModel.value.dropLocation!.longitude,
+            id: "Destination",
+            descriptor: destinationIcon!,
+            rotation: 0.0);
+      }
+      
+      if (driverUserModel.value.location != null &&
+          driverIcon != null) {
+        addMarker(
+            latitude: driverUserModel.value.location!.latitude,
+            longitude: driverUserModel.value.location!.longitude,
+            id: "Driver",
+            descriptor: driverIcon!,
+            rotation: driverUserModel.value.rotation ?? 0.0);
+      }
 
       _addPolyLine(polylineCoordinates);
     }

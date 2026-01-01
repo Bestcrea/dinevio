@@ -96,8 +96,9 @@ class MyWalletController extends GetxController {
   }
 
   Future<void> getProfileData() async {
-    await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid())
-        .then((value) {
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+    await FireStoreUtils.getUserProfile(uid).then((value) {
       if (value != null) {
         userModel.value = value;
       }
@@ -113,7 +114,7 @@ class MyWalletController extends GetxController {
         createdDate: Timestamp.now(),
         paymentType: selectedPaymentMethod.value,
         transactionId: transactionId,
-        userId: FireStoreUtils.getCurrentUid(),
+        userId: FireStoreUtils.getCurrentUid() ?? "",
         isCredit: true,
         type: "customer",
         note: "Wallet Top up");
@@ -145,7 +146,7 @@ class MyWalletController extends GetxController {
     transactionLogModel.value.transactionLog = transactionLog.toString();
     transactionLogModel.value.isCredit = isCredit;
     transactionLogModel.value.createdAt = Timestamp.now();
-    transactionLogModel.value.userId = FireStoreUtils.getCurrentUid();
+    transactionLogModel.value.userId = FireStoreUtils.getCurrentUid() ?? "";
     transactionLogModel.value.paymentType = selectedPaymentMethod.value;
     transactionLogModel.value.type = 'wallet';
 

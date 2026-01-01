@@ -8,7 +8,9 @@ class Styles {
       primaryColor: isDarkTheme ? AppThemData.primary400 : AppThemData.primary500,
       brightness: isDarkTheme ? Brightness.dark : Brightness.light,
       drawerTheme: DrawerThemeData(
-        backgroundColor: isDarkTheme ? AppThemData.grey950 : AppThemData.grey25,
+        backgroundColor: Colors.white, // Fond blanc comme dans les images
+        width: 304.0, // Largeur standard pour mobile
+        elevation: 16.0,
       ),
       appBarTheme: AppBarTheme(
         surfaceTintColor: isDarkTheme ? AppThemData.grey950 : AppThemData.grey25,

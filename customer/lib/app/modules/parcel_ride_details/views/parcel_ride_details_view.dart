@@ -25,6 +25,7 @@ import 'package:customer/theme/app_them_data.dart';
 import 'package:customer/theme/responsive.dart';
 import 'package:customer/utils/dark_theme_provider.dart';
 import 'package:customer/utils/fire_store_utils.dart';
+import 'package:customer/utils/currency_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -38,6 +39,17 @@ import 'widgets/parcel_payment_dialog_view.dart';
 
 class ParcelRideDetailsView extends GetView<ParcelRideDetailsController> {
   const ParcelRideDetailsView({super.key});
+
+  /// Safely get substring with length check
+  static String _safeSubstring(String? text, int length) {
+    if (text == null || text.isEmpty) {
+      return 'N/A';
+    }
+    if (text.length <= length) {
+      return text;
+    }
+    return text.substring(0, length);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -381,7 +393,7 @@ class ParcelRideDetailsView extends GetView<ParcelRideDetailsController> {
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  'ID: ${controller.parcelModel.value.id!.substring(0, 5)}',
+                                                  'ID: ${_safeSubstring(controller.parcelModel.value.id, 5)}',
                                                   style: GoogleFonts.inter(
                                                     color: themeChange.isDarkTheme() ? AppThemData.grey25 : AppThemData.grey950,
                                                     fontSize: 16,
@@ -410,7 +422,9 @@ class ParcelRideDetailsView extends GetView<ParcelRideDetailsController> {
                                             crossAxisAlignment: CrossAxisAlignment.end,
                                             children: [
                                               Text(
-                                                Constant.amountToShow(amount: Constant.calculateParcelFinalAmount(controller.parcelModel.value).toString()),
+                                                CurrencyFormatter.formatMoneyMADFromString(
+                                                  Constant.calculateParcelFinalAmount(controller.parcelModel.value).toString(),
+                                                ),
                                                 textAlign: TextAlign.right,
                                                 style: GoogleFonts.inter(
                                                   color: themeChange.isDarkTheme() ? AppThemData.grey25 : AppThemData.grey950,
@@ -624,7 +638,7 @@ class ParcelRideDetailsView extends GetView<ParcelRideDetailsController> {
                                                                                                           bookingId: controller.parcelModel.value.id,
                                                                                                           driverId: driverUserModel.id,
                                                                                                           body:
-                                                                                                              'Your ride #${controller.parcelModel.value.id.toString().substring(0, 5)} bid has been close.',
+                                                                                                              'Your ride #${_safeSubstring(controller.parcelModel.value.id?.toString(), 5)} bid has been close.',
                                                                                                           payload: playLoad);
                                                                                                       ShowToastDialog.closeLoader();
                                                                                                     }
@@ -695,7 +709,7 @@ class ParcelRideDetailsView extends GetView<ParcelRideDetailsController> {
                                                                                                         bookingId: controller.parcelModel.value.id,
                                                                                                         driverId: driverUserModel.id,
                                                                                                         body:
-                                                                                                            'Your ride #${controller.parcelModel.value.id.toString().substring(0, 5)} has been confirmed.',
+                                                                                                            'Your ride #${_safeSubstring(controller.parcelModel.value.id?.toString(), 5)} has been confirmed.',
                                                                                                         payload: playLoad);
                                                                                                     Navigator.pop(context);
                                                                                                     controller.update();
@@ -782,7 +796,7 @@ class ParcelRideDetailsView extends GetView<ParcelRideDetailsController> {
                                                                         // ),
                                                                         // const SizedBox(width: 8),
                                                                         Text(
-                                                                          Constant.amountToShow(amount: bidModel.amount),
+                                                                          CurrencyFormatter.formatMoneyMADFromString(bidModel.amount),
                                                                           style: GoogleFonts.inter(
                                                                             color: themeChange.isDarkTheme() ? AppThemData.grey25 : AppThemData.grey950,
                                                                             fontSize: 14,
@@ -942,7 +956,9 @@ class ParcelRideDetailsView extends GetView<ParcelRideDetailsController> {
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             Text(
-                                              Constant.amountToShow(amount: Constant.calculateParcelFinalAmount(controller.parcelModel.value).toStringAsFixed(2)),
+                                              CurrencyFormatter.formatMoneyMAD(
+                                                double.parse(Constant.calculateParcelFinalAmount(controller.parcelModel.value).toString()),
+                                              ),
                                               textAlign: TextAlign.right,
                                               style: GoogleFonts.inter(
                                                 color: themeChange.isDarkTheme() ? AppThemData.grey25 : AppThemData.grey950,
@@ -1277,14 +1293,14 @@ class ParcelRideDetailsView extends GetView<ParcelRideDetailsController> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         PriceRowView(
-                                          price: Constant.amountToShow(amount: controller.parcelModel.value.subTotal.toString()),
+                                          price: CurrencyFormatter.formatMoneyMADFromString(controller.parcelModel.value.subTotal.toString()),
                                           title: "Amount".tr,
                                           priceColor: themeChange.isDarkTheme() ? AppThemData.grey25 : AppThemData.grey950,
                                           titleColor: themeChange.isDarkTheme() ? AppThemData.grey25 : AppThemData.grey950,
                                         ),
                                         const SizedBox(height: 16),
                                         PriceRowView(
-                                            price: Constant.amountToShow(amount: controller.parcelModel.value.discount ?? '0.0'),
+                                            price: CurrencyFormatter.formatMoneyMADFromString(controller.parcelModel.value.discount ?? '0.0'),
                                             title: "Discount".tr,
                                             priceColor: themeChange.isDarkTheme() ? AppThemData.grey25 : AppThemData.grey950,
                                             titleColor: themeChange.isDarkTheme() ? AppThemData.grey25 : AppThemData.grey950),
@@ -1298,14 +1314,14 @@ class ParcelRideDetailsView extends GetView<ParcelRideDetailsController> {
                                             return Column(
                                               children: [
                                                 PriceRowView(
-                                                    price: Constant.amountToShow(
-                                                        amount: Constant.calculateTax(
+                                                    price: CurrencyFormatter.formatMoneyMADFromString(
+                                                        Constant.calculateTax(
                                                                 amount:
                                                                     ((double.parse(controller.parcelModel.value.subTotal ?? '0.0')) - (double.parse(controller.parcelModel.value.discount ?? '0.0')))
                                                                         .toString(),
                                                                 taxModel: taxModel)
                                                             .toString()),
-                                                    title: "${taxModel.name!} (${taxModel.isFix == true ? Constant.amountToShow(amount: taxModel.value) : "${taxModel.value}%"})",
+                                                    title: "${taxModel.name!} (${taxModel.isFix == true ? CurrencyFormatter.formatMoneyMADFromString(taxModel.value) : "${taxModel.value}%"})",
                                                     priceColor: themeChange.isDarkTheme() ? AppThemData.grey25 : AppThemData.grey950,
                                                     titleColor: themeChange.isDarkTheme() ? AppThemData.grey25 : AppThemData.grey950),
                                                 const SizedBox(height: 16),

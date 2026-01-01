@@ -2,25 +2,33 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>API_KEY</key>
-    <string>YOUR_FIREBASE_API_KEY</string>
-    <key>CLIENT_ID</key>
-    <string>YOUR_CLIENT_ID</string>
-    <key>PROJECT_ID</key>
-    <string>YOUR_PROJECT_ID</string>
-    <key>STORAGE_BUCKET</key>
-    <string>YOUR_PROJECT_ID.appspot.com</string>
-    <key>GCM_SENDER_ID</key>
-    <string>YOUR_PROJECT_NUMBER</string>
-    <key>PLIST_VERSION</key>
-    <string>1</string>
-    <key>BUNDLE_ID</key>
-    <string>YOUR_IOS_BUNDLE_ID</string>
-    <key>DATABASE_URL</key>
-    <string>https://YOUR_PROJECT_ID.firebaseio.com</string>
-    <key>TRACKING_ID</key>
-    <string>YOUR_TRACKING_ID</string>
-    <key>GOOGLE_APP_ID</key>
-    <string>YOUR_GOOGLE_APP_ID</string>
+	<key>CLIENT_ID</key>
+	<string>773514102852-rtjejn067a2dthfao0uf6lon8vdj049m.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.773514102852-rtjejn067a2dthfao0uf6lon8vdj049m</string>
+	<key>API_KEY</key>
+	<string>AIzaSyC3mU9UPeyFZp9tMx81ABGM1vrTtEhEjXU</string>
+	<key>GCM_SENDER_ID</key>
+	<string>773514102852</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.mytaxi.customers</string>
+	<key>PROJECT_ID</key>
+	<string>dinevio-app</string>
+	<key>STORAGE_BUCKET</key>
+	<string>dinevio-app.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:773514102852:ios:c4dc8c41117170aade1411</string>
 </dict>
 </plist>

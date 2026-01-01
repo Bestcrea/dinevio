@@ -22,7 +22,15 @@ class HtmlViewScreenView extends GetView<HtmlViewScreenController> {
     final themeChange = Provider.of<DarkThemeProvider>(context);
     return Scaffold(
       backgroundColor: themeChange.isDarkTheme() ? AppThemData.black : AppThemData.white,
-      // appBar: AppBarWithBorder(title: title.toString(), bgColor: themeChange.isDarkTheme() ? AppThemData.black : AppThemData.white),
+      appBar: AppBar(
+        title: Text(title),
+        backgroundColor: themeChange.isDarkTheme() ? AppThemData.black : AppThemData.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Get.back(),
+        ),
+      ),
       body: SingleChildScrollView(
         child: Center(
           child: Padding(

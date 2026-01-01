@@ -1,16 +1,102 @@
 /**
- * Firebase function to assign ride to nearest driver or cancel if no one accepts.
+ * Firebase Cloud Functions for Dinevio
+ * Includes ride assignment and Stripe payment processing
  */
 
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { onRequest } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { v4: uuidv4 } = require("uuid");
+const Stripe = require('stripe');
 
 initializeApp();
 const db = getFirestore();
 
+// Initialize Stripe with secret key from environment config
+// Set via: firebase functions:config:set stripe.secret="sk_test_..."
+// Or use environment variable: STRIPE_SECRET_KEY
+let stripeSecret = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecret) {
+  try {
+    // Try to get from Firebase config (legacy method)
+    const functions = require('firebase-functions');
+    if (functions.config && functions.config().stripe) {
+      stripeSecret = functions.config().stripe.secret;
+    }
+  } catch (e) {
+    console.warn('Could not load Stripe secret from config. Set STRIPE_SECRET_KEY environment variable.');
+  }
+}
+const stripe = stripeSecret ? Stripe(stripeSecret) : null;
+
+/**
+ * Create Stripe PaymentIntent (HTTPS Callable)
+ * Input: { amount (cents), currency ("mad"), metadata (optional) }
+ * Output: { clientSecret }
+ */
+const { onCall } = require('firebase-functions/v2/https');
+
+exports.createPaymentIntent = onCall(
+  {
+    cors: true, // Enable CORS for Flutter web
+    maxInstances: 10,
+  },
+  async (request) => {
+    try {
+      const { amount, currency = 'mad', metadata = {} } = request.data;
+
+      // Validate Stripe is initialized
+      if (!stripe) {
+        throw new HttpsError(
+          'internal',
+          'Stripe is not configured. Please set STRIPE_SECRET_KEY.'
+        );
+      }
+
+      // Validate amount
+      if (!amount || typeof amount !== 'number' || amount <= 0) {
+        throw new HttpsError(
+          'invalid-argument',
+          'Invalid amount. Must be a positive number in cents.'
+        );
+      }
+
+      // Create PaymentIntent with automatic payment methods
+      // This enables Apple Pay and Google Pay automatically if configured in Stripe Dashboard
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount), // Ensure integer
+        currency: currency.toLowerCase(), // 'mad' for Moroccan Dirham
+        automatic_payment_methods: {
+          enabled: true, // Automatically enables Apple Pay, Google Pay, etc. if available
+        },
+        metadata: {
+          ...metadata,
+          created_at: new Date().toISOString(),
+        },
+      });
+
+      // Return only the client secret (never expose the full PaymentIntent)
+      return {
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id, // Optional: for tracking
+      };
+    } catch (error) {
+      console.error('Error creating PaymentIntent:', error);
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError(
+        'internal',
+        'Failed to create payment intent',
+        error.message
+      );
+    }
+  }
+);
+
+// Existing ride assignment function
 exports.cancelledRide = onDocumentWritten({ document: 'bookings/{bookingId}' }, async (event) => {
   const beforeData = event.data.before.exists ? event.data.before.data() : null;
   const afterData = event.data.after.exists ? event.data.after.data() : null;
@@ -157,7 +243,7 @@ async function reassignOrCancelOrder(bookingId) {
       const orderSeconds = parseInt(settingData.data()?.secondsForRideCancel, 10) || 60;
 
       setTimeout(async () => {
-        const updatedOrder = (await db.collection("bookings").doc(bookingDetails.id).get()).data();
+        const updatedOrder = (await bookingRef.get()).data();
         if (updatedOrder.bookingStatus === "driver_assigned") {
           await db.collection("bookings").doc(bookingDetails.id).update({
             rejectedDriverId: FieldValue.arrayUnion(driver.id)
@@ -222,7 +308,7 @@ function calculateDistance(location1, location2) {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.sin(dLat / 2) * Math.sin(dLat / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;

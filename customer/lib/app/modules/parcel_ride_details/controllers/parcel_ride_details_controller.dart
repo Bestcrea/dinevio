@@ -127,8 +127,9 @@ class ParcelRideDetailsController extends GetxController {
   }
 
   Future<void> getProfileData() async {
-    await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid())
-        .then((value) {
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+    await FireStoreUtils.getUserProfile(uid).then((value) {
       if (value != null) {
         userModel.value = value;
       }
@@ -219,10 +220,10 @@ class ParcelRideDetailsController extends GetxController {
         token: receiverUserModel.fcmToken.toString(),
         title: 'Payment Received'.tr,
         body:
-            'Payment Received for Ride #${parcelModel.value.id.toString().substring(0, 5)}',
+            'Payment Received for Ride #${_safeSubstring(parcelModel.value.id.toString(), 5)}',
         bookingId: parcelModel.value.id,
         driverId: parcelModel.value.driverId.toString(),
-        senderId: FireStoreUtils.getCurrentUid(),
+        senderId: FireStoreUtils.getCurrentUid() ?? "",
         payload: playLoad,
       );
     }
@@ -247,7 +248,7 @@ class ParcelRideDetailsController extends GetxController {
         createdDate: Timestamp.now(),
         paymentType: selectedPaymentMethod.value,
         transactionId: DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: FireStoreUtils.getCurrentUid(),
+        userId: FireStoreUtils.getCurrentUid() ?? "",
         isCredit: false,
         type: Constant.typeCustomer,
         note: "Ride fee Debited");
@@ -734,6 +735,17 @@ class ParcelRideDetailsController extends GetxController {
 
     var result = await mp.createPreference(pref);
     return result;
+  }
+
+  /// Safely get substring with length check
+  String _safeSubstring(String? text, int length) {
+    if (text == null || text.isEmpty) {
+      return 'N/A';
+    }
+    if (text.length <= length) {
+      return text;
+    }
+    return text.substring(0, length);
   }
 
   // ::::::::::::::::::::::::::::::::::::::::::::Pay Fast::::::::::::::::::::::::::::::::::::::::::::::::::::

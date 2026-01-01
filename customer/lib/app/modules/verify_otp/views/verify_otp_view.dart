@@ -8,6 +8,7 @@ import 'package:customer/theme/app_them_data.dart';
 import 'package:customer/utils/dark_theme_provider.dart';
 import 'package:customer/utils/fire_store_utils.dart';
 import 'package:customer/utils/notification_service.dart';
+import 'package:customer/auth/utils/firebase_auth_error_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -35,9 +36,13 @@ class VerifyOtpView extends StatelessWidget {
               }
             },
             child: Scaffold(
-              backgroundColor: themeChange.isDarkTheme() ? AppThemData.black : AppThemData.white,
+              backgroundColor: themeChange.isDarkTheme()
+                  ? AppThemData.black
+                  : AppThemData.white,
               appBar: AppBar(
-                backgroundColor: themeChange.isDarkTheme() ? AppThemData.black : AppThemData.white,
+                backgroundColor: themeChange.isDarkTheme()
+                    ? AppThemData.black
+                    : AppThemData.white,
                 centerTitle: true,
                 automaticallyImplyLeading: false,
                 leading: InkWell(
@@ -45,7 +50,10 @@ class VerifyOtpView extends StatelessWidget {
                       Get.back();
                     },
                     child: const Icon(Icons.arrow_back_rounded)),
-                iconTheme: IconThemeData(color: themeChange.isDarkTheme() ? AppThemData.white : AppThemData.black),
+                iconTheme: IconThemeData(
+                    color: themeChange.isDarkTheme()
+                        ? AppThemData.white
+                        : AppThemData.black),
               ),
               body: Padding(
                 padding: const EdgeInsets.only(left: 20, right: 20, top: 31),
@@ -53,26 +61,62 @@ class VerifyOtpView extends StatelessWidget {
                   children: [
                     Text(
                       "Verify Your Phone Number".tr,
-                      style: GoogleFonts.inter(fontSize: 24, color: themeChange.isDarkTheme() ? AppThemData.white : AppThemData.black, fontWeight: FontWeight.w700),
+                      style: GoogleFonts.inter(
+                          fontSize: 24,
+                          color: themeChange.isDarkTheme()
+                              ? AppThemData.white
+                              : AppThemData.black,
+                          fontWeight: FontWeight.w700),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(top: 8, bottom: 33),
-                      child: Text(
-                        "Enter  6-digit code sent to your mobile number to complete verification.".tr,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 14, color: themeChange.isDarkTheme() ? AppThemData.white : AppThemData.black, fontWeight: FontWeight.w400),
+                      child: Column(
+                        children: [
+                          Text(
+                            "Enter  6-digit code sent to your mobile number to complete verification."
+                                .tr,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: themeChange.isDarkTheme()
+                                    ? AppThemData.white
+                                    : AppThemData.black,
+                                fontWeight: FontWeight.w400),
+                          ),
+                          if (controller.isTestMode.value) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppThemData.primary500.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border:
+                                    Border.all(color: AppThemData.primary500),
+                              ),
+                              child: Text(
+                                "Mode test : Entrez le code 123456".tr,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: AppThemData.primary500,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     Pinput(
                       length: 6,
                       showCursor: true,
-
                       defaultPinTheme: PinTheme(
                         width: 52,
                         height: 52,
                         textStyle: TextStyle(
                           fontSize: 16,
-                          color: themeChange.isDarkTheme() ? AppThemData.white : AppThemData.grey950,
+                          color: themeChange.isDarkTheme()
+                              ? AppThemData.white
+                              : AppThemData.grey950,
                           fontWeight: FontWeight.w500,
                           fontFamily: GoogleFonts.inter().fontFamily,
                         ),
@@ -87,7 +131,9 @@ class VerifyOtpView extends StatelessWidget {
                         height: 52,
                         textStyle: TextStyle(
                           fontSize: 16,
-                          color: themeChange.isDarkTheme() ? AppThemData.white : AppThemData.grey950,
+                          color: themeChange.isDarkTheme()
+                              ? AppThemData.white
+                              : AppThemData.grey950,
                           fontWeight: FontWeight.w500,
                           fontFamily: GoogleFonts.inter().fontFamily,
                         ),
@@ -99,15 +145,59 @@ class VerifyOtpView extends StatelessWidget {
                       ),
                       onCompleted: (pin) async {
                         if (pin.length == 6) {
+                          // Mode test : accepter le code 123456
+                          if (controller.isTestMode.value && pin == "123456") {
+                            ShowToastDialog.showLoader("verify_OTP".tr);
+                            await Future.delayed(const Duration(seconds: 1));
+                            // Créer un utilisateur de test
+                            String fcmToken =
+                                await NotificationService.getToken();
+                            UserModel userModel = UserModel();
+                            userModel.id =
+                                "TEST_USER_${controller.phoneNumber.value}";
+                            userModel.countryCode =
+                                controller.countryCode.value;
+                            userModel.phoneNumber =
+                                controller.phoneNumber.value;
+                            userModel.loginType = Constant.phoneLoginType;
+                            userModel.fcmToken = fcmToken;
+                            userModel.fullName = "Test User";
+                            userModel.isActive = true;
+
+                            ShowToastDialog.closeLoader();
+                            Get.off(const SignupView(), arguments: {
+                              "userModel": userModel,
+                            });
+                            return;
+                          }
+
                           ShowToastDialog.showLoader("verify_OTP".tr);
-                          PhoneAuthCredential credential = PhoneAuthProvider.credential(verificationId: controller.verificationId.value, smsCode: pin);
-                          await FirebaseAuth.instance.signInWithCredential(credential).then((value) async {
+                          PhoneAuthCredential credential =
+                              PhoneAuthProvider.credential(
+                                  verificationId:
+                                      controller.verificationId.value,
+                                  smsCode: pin);
+                          debugPrint('[VerifyOTP] Verifying code');
+                          debugPrint('[VerifyOTP] Verification ID: ${controller.verificationId.value.substring(0, 10)}...');
+                          debugPrint('[VerifyOTP] Code length: ${pin.length}');
+                          
+                          await FirebaseAuth.instance
+                              .signInWithCredential(credential)
+                              .then((value) async {
+                            debugPrint('[VerifyOTP] Sign-in successful');
+                            debugPrint('[VerifyOTP] User ID: ${value.user?.uid}');
+                            debugPrint('[VerifyOTP] Is new user: ${value.additionalUserInfo?.isNewUser}');
+                            
                             if (value.additionalUserInfo!.isNewUser) {
-                              String fcmToken = await NotificationService.getToken();
+                              debugPrint('[VerifyOTP] New user - redirecting to signup');
+                              String fcmToken =
+                                  await NotificationService.getToken();
                               UserModel userModel = UserModel();
                               userModel.id = value.user!.uid;
-                              userModel.countryCode = controller.countryCode.value;
-                              userModel.phoneNumber = controller.phoneNumber.value;
+                              userModel.countryCode =
+                                  controller.countryCode.value;
+                              userModel.phoneNumber =
+                                  controller.phoneNumber.value;
                               userModel.loginType = Constant.phoneLoginType;
                               userModel.fcmToken = fcmToken;
 
@@ -116,24 +206,37 @@ class VerifyOtpView extends StatelessWidget {
                                 "userModel": userModel,
                               });
                             } else {
-                              await FireStoreUtils.userExistOrNot(value.user!.uid).then((userExit) async {
+                              debugPrint('[VerifyOTP] Existing user - checking in database');
+                              await FireStoreUtils.userExistOrNot(
+                                      value.user!.uid)
+                                  .then((userExit) async {
                                 ShowToastDialog.closeLoader();
                                 if (userExit == true) {
-                                  UserModel? userModel = await FireStoreUtils.getUserProfile(value.user!.uid);
+                                  debugPrint('[VerifyOTP] User exists in database');
+                                  UserModel? userModel =
+                                      await FireStoreUtils.getUserProfile(
+                                          value.user!.uid);
                                   if (userModel != null) {
                                     if (userModel.isActive == true) {
+                                      debugPrint('[VerifyOTP] User active - redirecting to home');
                                       Get.offAll(const HomeView());
                                     } else {
+                                      debugPrint('[VerifyOTP] User disabled');
                                       await FirebaseAuth.instance.signOut();
-                                      ShowToastDialog.showToast("user_disable_admin_contact".tr);
+                                      ShowToastDialog.showToast(
+                                          "user_disable_admin_contact".tr);
                                     }
                                   }
                                 } else {
-                                  String fcmToken = await NotificationService.getToken();
+                                  debugPrint('[VerifyOTP] User not in database - redirecting to signup');
+                                  String fcmToken =
+                                      await NotificationService.getToken();
                                   UserModel userModel = UserModel();
                                   userModel.id = value.user!.uid;
-                                  userModel.countryCode = controller.countryCode.value;
-                                  userModel.phoneNumber = controller.phoneNumber.value;
+                                  userModel.countryCode =
+                                      controller.countryCode.value;
+                                  userModel.phoneNumber =
+                                      controller.phoneNumber.value;
                                   userModel.loginType = Constant.phoneLoginType;
                                   userModel.fcmToken = fcmToken;
 
@@ -144,8 +247,20 @@ class VerifyOtpView extends StatelessWidget {
                               });
                             }
                           }).catchError((error) {
+                            debugPrint('[VerifyOTP] Sign-in failed');
                             ShowToastDialog.closeLoader();
-                            ShowToastDialog.showToast("invalid_code".tr);
+                            
+                            if (error is FirebaseAuthException) {
+                              final errorMessage = FirebaseAuthErrorHandler.getUserFriendlyMessage(error);
+                              FirebaseAuthErrorHandler.logError(
+                                exception: error,
+                                context: 'OTP verification',
+                              );
+                              ShowToastDialog.showToast(errorMessage);
+                            } else {
+                              debugPrint('[VerifyOTP] Unexpected error: $error');
+                              ShowToastDialog.showToast("invalid_code".tr);
+                            }
                           });
                         } else {
                           controller.otpCode.value = pin;
@@ -160,15 +275,50 @@ class VerifyOtpView extends StatelessWidget {
                         buttonTextColor: AppThemData.black,
                         onTap: () async {
                           if (controller.otpCode.value.length == 6) {
+                            // Mode test : accepter le code 123456
+                            if (controller.isTestMode.value &&
+                                controller.otpCode.value == "123456") {
+                              ShowToastDialog.showLoader("verify_OTP".tr);
+                              await Future.delayed(const Duration(seconds: 1));
+                              String fcmToken =
+                                  await NotificationService.getToken();
+                              UserModel userModel = UserModel();
+                              userModel.id =
+                                  "TEST_USER_${controller.phoneNumber.value}";
+                              userModel.countryCode =
+                                  controller.countryCode.value;
+                              userModel.phoneNumber =
+                                  controller.phoneNumber.value;
+                              userModel.loginType = Constant.phoneLoginType;
+                              userModel.fcmToken = fcmToken;
+                              userModel.fullName = "Test User";
+                              userModel.isActive = true;
+
+                              ShowToastDialog.closeLoader();
+                              Get.off(const SignupView(), arguments: {
+                                "userModel": userModel,
+                              });
+                              return;
+                            }
+
                             ShowToastDialog.showLoader("verify_OTP".tr);
-                            PhoneAuthCredential credential = PhoneAuthProvider.credential(verificationId: controller.verificationId.value, smsCode: controller.otpCode.value);
-                            String fcmToken = await NotificationService.getToken();
-                            await FirebaseAuth.instance.signInWithCredential(credential).then((value) async {
+                            PhoneAuthCredential credential =
+                                PhoneAuthProvider.credential(
+                                    verificationId:
+                                        controller.verificationId.value,
+                                    smsCode: controller.otpCode.value);
+                            String fcmToken =
+                                await NotificationService.getToken();
+                            await FirebaseAuth.instance
+                                .signInWithCredential(credential)
+                                .then((value) async {
                               if (value.additionalUserInfo!.isNewUser) {
                                 UserModel userModel = UserModel();
                                 userModel.id = value.user!.uid;
-                                userModel.countryCode = controller.countryCode.value;
-                                userModel.phoneNumber = controller.phoneNumber.value;
+                                userModel.countryCode =
+                                    controller.countryCode.value;
+                                userModel.phoneNumber =
+                                    controller.phoneNumber.value;
                                 userModel.loginType = Constant.phoneLoginType;
                                 userModel.fcmToken = fcmToken;
 
@@ -177,24 +327,32 @@ class VerifyOtpView extends StatelessWidget {
                                   "userModel": userModel,
                                 });
                               } else {
-                                await FireStoreUtils.userExistOrNot(value.user!.uid).then((userExit) async {
+                                await FireStoreUtils.userExistOrNot(
+                                        value.user!.uid)
+                                    .then((userExit) async {
                                   ShowToastDialog.closeLoader();
                                   if (userExit == true) {
-                                    UserModel? userModel = await FireStoreUtils.getUserProfile(value.user!.uid);
+                                    UserModel? userModel =
+                                        await FireStoreUtils.getUserProfile(
+                                            value.user!.uid);
                                     if (userModel != null) {
                                       if (userModel.isActive == true) {
                                         Get.offAll(const HomeView());
                                       } else {
                                         await FirebaseAuth.instance.signOut();
-                                        ShowToastDialog.showToast("user_disable_admin_contact".tr);
+                                        ShowToastDialog.showToast(
+                                            "user_disable_admin_contact".tr);
                                       }
                                     }
                                   } else {
                                     UserModel userModel = UserModel();
                                     userModel.id = value.user!.uid;
-                                    userModel.countryCode = controller.countryCode.value;
-                                    userModel.phoneNumber = controller.phoneNumber.value;
-                                    userModel.loginType = Constant.phoneLoginType;
+                                    userModel.countryCode =
+                                        controller.countryCode.value;
+                                    userModel.phoneNumber =
+                                        controller.phoneNumber.value;
+                                    userModel.loginType =
+                                        Constant.phoneLoginType;
                                     userModel.fcmToken = fcmToken;
 
                                     Get.off(const SignupView(), arguments: {
@@ -221,11 +379,19 @@ class VerifyOtpView extends StatelessWidget {
                         children: [
                           TextSpan(
                             text: 'Did’t Receive a code ?'.tr,
-                            style: GoogleFonts.inter(fontSize: 14, color: AppThemData.grey400, fontWeight: FontWeight.w400),
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: AppThemData.grey400,
+                                fontWeight: FontWeight.w400),
                           ),
                           TextSpan(
                             text: ' ${'Resend Code'.tr}',
-                            style: GoogleFonts.inter(fontSize: 14, color: themeChange.isDarkTheme() ? AppThemData.white : AppThemData.grey950, fontWeight: FontWeight.w600),
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: themeChange.isDarkTheme()
+                                    ? AppThemData.white
+                                    : AppThemData.grey950,
+                                fontWeight: FontWeight.w600),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 controller.sendOTP();

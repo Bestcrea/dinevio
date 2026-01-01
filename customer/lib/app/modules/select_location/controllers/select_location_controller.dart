@@ -115,11 +115,25 @@ class SelectLocationController extends GetxController {
 
   Future<void> getData() async {
     currentLocationPosition = await Utils.getCurrentLocation();
-    Constant.country = (await placemarkFromCoordinates(
-                currentLocationPosition!.latitude,
-                currentLocationPosition!.longitude))[0]
-            .country ??
-        'Unknown';
+    
+    // Defensive check: ensure placemarkFromCoordinates returns non-empty list before accessing [0]
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        currentLocationPosition!.latitude,
+        currentLocationPosition!.longitude,
+      );
+      
+      if (placemarks.isNotEmpty) {
+        Constant.country = placemarks[0].country ?? 'Unknown';
+      } else {
+        log("Warning: placemarkFromCoordinates returned empty list. Using default country.");
+        Constant.country = 'Unknown';
+      }
+    } catch (e) {
+      log("Error getting placemark: $e");
+      Constant.country = 'Unknown';
+    }
+    
     getTax();
     sourceLocation = LatLng(
         currentLocationPosition!.latitude, currentLocationPosition!.longitude);
@@ -226,10 +240,32 @@ class SelectLocationController extends GetxController {
       ShowToastDialog.showLoader("Please wait".tr);
       mapModel.value =
           await Constant.getDurationDistance(sourceLocation!, destination!);
-      bookingModel.value.dropLocationAddress =
-          mapModel.value!.destinationAddresses!.first;
-      bookingModel.value.pickUpLocationAddress =
-          mapModel.value!.originAddresses!.first;
+      
+      // Defensive check: ensure mapModel and address lists are not empty before accessing .first
+      if (mapModel.value != null &&
+          mapModel.value!.destinationAddresses != null &&
+          mapModel.value!.destinationAddresses!.isNotEmpty) {
+        bookingModel.value.dropLocationAddress =
+            mapModel.value!.destinationAddresses!.first;
+      } else {
+        log("Warning: destinationAddresses is empty or null. Using fallback address.");
+        bookingModel.value.dropLocationAddress = dropLocationController.text.isNotEmpty
+            ? dropLocationController.text
+            : 'Destination location';
+      }
+      
+      if (mapModel.value != null &&
+          mapModel.value!.originAddresses != null &&
+          mapModel.value!.originAddresses!.isNotEmpty) {
+        bookingModel.value.pickUpLocationAddress =
+            mapModel.value!.originAddresses!.first;
+      } else {
+        log("Warning: originAddresses is empty or null. Using fallback address.");
+        bookingModel.value.pickUpLocationAddress = pickupLocationController.text.isNotEmpty
+            ? pickupLocationController.text
+            : 'Pickup location';
+      }
+      
       bookingModel.value = BookingModel.fromJson(bookingModel.value.toJson());
 
       distanceOfKm.value = DistanceModel(
@@ -587,6 +623,26 @@ class SelectLocationController extends GetxController {
   }
 
   String amountShow(VehicleTypeModel vehicleType, MapModel value) {
+    // Defensive check: ensure rows and elements lists are not empty before accessing .first
+    if (value.rows == null || value.rows!.isEmpty) {
+      log("Warning: value.rows is null or empty. Returning minimum charge.");
+      final minCharge = double.tryParse(vehicleType.charges.farMinimumCharges) ?? 0.0;
+      return minCharge.toStringAsFixed(Constant.currencyModel?.decimalDigits ?? 2);
+    }
+    
+    if (value.rows!.first.elements == null || value.rows!.first.elements!.isEmpty) {
+      log("Warning: elements list is null or empty. Returning minimum charge.");
+      final minCharge = double.tryParse(vehicleType.charges.farMinimumCharges) ?? 0.0;
+      return minCharge.toStringAsFixed(Constant.currencyModel?.decimalDigits ?? 2);
+    }
+    
+    if (value.rows!.first.elements!.first.distance == null ||
+        value.rows!.first.elements!.first.distance!.value == null) {
+      log("Warning: distance is null. Returning minimum charge.");
+      final minCharge = double.tryParse(vehicleType.charges.farMinimumCharges) ?? 0.0;
+      return minCharge.toStringAsFixed(Constant.currencyModel?.decimalDigits ?? 2);
+    }
+    
     if (Constant.distanceType == "Km") {
       var distance =
           (value.rows!.first.elements!.first.distance!.value!.toInt() / 1000);
@@ -594,12 +650,12 @@ class SelectLocationController extends GetxController {
           double.parse(vehicleType.charges.fareMinimumChargesWithinKm)) {
         return Constant.amountCalculate(
                 vehicleType.charges.farePerKm.toString(), distance.toString())
-            .toStringAsFixed(Constant.currencyModel!.decimalDigits!);
+            .toStringAsFixed(Constant.currencyModel?.decimalDigits ?? 2);
       } else {
         return Constant.amountCalculate(
                 vehicleType.charges.farMinimumCharges.toString(),
                 distance.toString())
-            .toStringAsFixed(Constant.currencyModel!.decimalDigits!);
+            .toStringAsFixed(Constant.currencyModel?.decimalDigits ?? 2);
       }
     } else {
       var distance =
@@ -609,23 +665,40 @@ class SelectLocationController extends GetxController {
           double.parse(vehicleType.charges.fareMinimumChargesWithinKm)) {
         return Constant.amountCalculate(
                 vehicleType.charges.farePerKm.toString(), distance.toString())
-            .toStringAsFixed(Constant.currencyModel!.decimalDigits!);
+            .toStringAsFixed(Constant.currencyModel?.decimalDigits ?? 2);
       } else {
         return Constant.amountCalculate(
                 vehicleType.charges.farMinimumCharges.toString(),
                 distance.toString())
-            .toStringAsFixed(Constant.currencyModel!.decimalDigits!);
+            .toStringAsFixed(Constant.currencyModel?.decimalDigits ?? 2);
       }
     }
   }
 
   String distanceCalculate(MapModel? value) {
+    // Defensive check: ensure value, rows, and elements are not null/empty before accessing .first
+    if (value == null || value.rows == null || value.rows!.isEmpty) {
+      log("Warning: MapModel value or rows is null/empty. Returning default distance.");
+      return "0";
+    }
+    
+    if (value.rows!.first.elements == null || value.rows!.first.elements!.isEmpty) {
+      log("Warning: elements list is null or empty. Returning default distance.");
+      return "0";
+    }
+    
+    if (value.rows!.first.elements!.first.distance == null ||
+        value.rows!.first.elements!.first.distance!.value == null) {
+      log("Warning: distance is null. Returning default distance.");
+      return "0";
+    }
+    
     if (Constant.distanceType == "Km") {
-      return (value!.rows!.first.elements!.first.distance!.value!.toInt() /
+      return (value.rows!.first.elements!.first.distance!.value!.toInt() /
               1000)
           .toString();
     } else {
-      return (value!.rows!.first.elements!.first.distance!.value!.toInt() /
+      return (value.rows!.first.elements!.first.distance!.value!.toInt() /
               1609.34)
           .toString();
     }

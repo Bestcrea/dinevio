@@ -17,7 +17,9 @@ class MyAccountController extends GetxController {
   }
 
   Future<void> _loadUser() async {
-    final UserModel? user = await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid());
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+    final UserModel? user = await FireStoreUtils.getUserProfile(uid);
     if (user != null) {
       name.value = (user.fullName ?? '').isNotEmpty ? user.fullName! : 'Demo';
       phone.value = '${user.countryCode ?? ''}${user.phoneNumber ?? ''}'.trim();
@@ -29,6 +31,3 @@ class MyAccountController extends GetxController {
     }
   }
 }
-
-
-

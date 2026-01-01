@@ -1205,7 +1205,7 @@ String? validateMobile(String? value, String? countryCode) {
       code: "MA",
       dialCode: "212",
       minLength: 9,
-      maxLength: 9,
+      maxLength: 10,
     ),
     Country(
       name: "Mozambique",
@@ -1979,11 +1979,26 @@ String? validateMobile(String? value, String? countryCode) {
 
   final Country selectedCountry = countries.firstWhere(
     (element) => element.dialCode == countryCode,
+    orElse: () => const Country(
+      name: "Unknown",
+      flag: "",
+      code: "",
+      dialCode: "",
+      minLength: 8,
+      maxLength: 15,
+    ),
   );
 
-  if (value.length < selectedCountry.minLength || value.length > selectedCountry.maxLength) {
+  if (value.length < selectedCountry.minLength ||
+      value.length > selectedCountry.maxLength) {
     return 'Please enter a valid mobile number';
   }
+
+  // Mode test : permettre les numéros de test comme 000000000
+  // En production, décommenter la vérification ci-dessous
+  // if (value.replaceAll('0', '').isEmpty) {
+  //   return 'Please enter a valid mobile number';
+  // }
 
   return null;
 }

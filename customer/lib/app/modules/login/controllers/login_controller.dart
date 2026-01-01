@@ -8,6 +8,7 @@ import 'package:customer/app/models/user_model.dart';
 import 'package:customer/app/modules/home/views/home_view.dart';
 import 'package:customer/app/modules/signup/views/signup_view.dart';
 import 'package:customer/app/modules/verify_otp/views/verify_otp_view.dart';
+import 'package:customer/auth/utils/firebase_auth_error_handler.dart';
 import 'package:customer/constant/constant.dart';
 import 'package:customer/constant_widgets/show_toast_dialog.dart';
 import 'package:customer/utils/fire_store_utils.dart';
@@ -18,7 +19,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class LoginController extends GetxController {
-  TextEditingController countryCodeController = TextEditingController(text: '+91');
+  TextEditingController countryCodeController =
+      TextEditingController(text: '+212');
   TextEditingController phoneNumberController = TextEditingController();
   Rx<GlobalKey<FormState>> formKey = GlobalKey<FormState>().obs;
 
@@ -37,52 +39,115 @@ class LoginController extends GetxController {
 
   Future<void> sendCode() async {
     try {
+      final phoneNumber = phoneNumberController.value.text;
+
+      // Mode test : accepter les numéros de test
+      if (phoneNumber == "000000000" ||
+          phoneNumber == "0000000000" ||
+          phoneNumber.startsWith("000")) {
+        ShowToastDialog.showLoader("Please wait".tr);
+        // Simuler un délai pour le mode test
+        await Future.delayed(const Duration(seconds: 1));
+        ShowToastDialog.closeLoader();
+        // Mode test : utiliser un verificationId factice
+        Get.to(const VerifyOtpView(), arguments: {
+          "countryCode": countryCodeController.value.text,
+          "phoneNumber": phoneNumberController.value.text,
+          "verificationId": "TEST_MODE_VERIFICATION_ID",
+          "isTestMode": true,
+        });
+        return;
+      }
+
+      final fullPhoneNumber = countryCodeController.value.text + phoneNumberController.value.text;
+      debugPrint('[LoginController] Requesting verification code');
+      debugPrint('[LoginController] Phone: ${_maskPhone(fullPhoneNumber)}');
+      
       ShowToastDialog.showLoader("Please wait".tr);
       await FirebaseAuth.instance
           .verifyPhoneNumber(
-        phoneNumber: countryCodeController.value.text + phoneNumberController.value.text,
-        verificationCompleted: (PhoneAuthCredential credential) {},
+        phoneNumber: fullPhoneNumber,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (PhoneAuthCredential credential) {
+          debugPrint('[LoginController] Auto-verification completed');
+          // Auto-verification handled in verificationCompleted
+        },
         verificationFailed: (FirebaseAuthException e) {
-          debugPrint("FirebaseAuthException--->${e.message}");
+          debugPrint('[LoginController] Verification failed');
           ShowToastDialog.closeLoader();
-          if (e.code == 'invalid-phone-number') {
-            ShowToastDialog.showToast("invalid_phone_number".tr);
-          } else {
-            ShowToastDialog.showToast(e.code);
-          }
+          
+          // Use error handler for user-friendly messages
+          final errorMessage = FirebaseAuthErrorHandler.getUserFriendlyMessage(e);
+          FirebaseAuthErrorHandler.logError(
+            exception: e,
+            context: 'Phone verification',
+            phoneNumber: fullPhoneNumber,
+          );
+          
+          ShowToastDialog.showToast(errorMessage);
         },
         codeSent: (String verificationId, int? resendToken) {
+          debugPrint('[LoginController] Verification code sent');
+          debugPrint('[LoginController] Verification ID received');
+          debugPrint('[LoginController] Resend token: ${resendToken != null ? "Available" : "None"}');
+          
           ShowToastDialog.closeLoader();
           Get.to(const VerifyOtpView(), arguments: {
             "countryCode": countryCodeController.value.text,
             "phoneNumber": phoneNumberController.value.text,
             "verificationId": verificationId,
+            "resendToken": resendToken,
+            "isTestMode": false,
           });
         },
-        codeAutoRetrievalTimeout: (String verificationId) {},
+        codeAutoRetrievalTimeout: (String verificationId) {
+          debugPrint('[LoginController] Auto-retrieval timeout');
+          debugPrint('[LoginController] Verification ID: ${verificationId.substring(0, 10)}...');
+        },
       )
           .catchError((error) {
-        debugPrint("catchError--->$error");
+        debugPrint('[LoginController] Catch error: $error');
         ShowToastDialog.closeLoader();
-        ShowToastDialog.showToast("multiple_time_request".tr);
+        
+        if (error is FirebaseAuthException) {
+          final errorMessage = FirebaseAuthErrorHandler.getUserFriendlyMessage(error);
+          ShowToastDialog.showToast(errorMessage);
+        } else {
+          ShowToastDialog.showToast("multiple_time_request".tr);
+        }
       });
     } catch (e) {
+      debugPrint('[LoginController] Unexpected error: $e');
       log("Error in Login ${e.toString()}");
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showToast("something went wrong!".tr);
+      
+      if (e is FirebaseAuthException) {
+        final errorMessage = FirebaseAuthErrorHandler.getUserFriendlyMessage(e);
+        ShowToastDialog.showToast(errorMessage);
+      } else {
+        ShowToastDialog.showToast("something went wrong!".tr);
+      }
     }
+  }
+
+  /// Mask phone number for logging (shows only last 4 digits)
+  String _maskPhone(String phone) {
+    if (phone.length <= 4) return '***';
+    return '***${phone.substring(phone.length - 4)}';
   }
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn().catchError((error) {
+      final GoogleSignInAccount? googleUser =
+          await GoogleSignIn().signIn().catchError((error) {
         ShowToastDialog.closeLoader();
         ShowToastDialog.showToast("something_went_wrong".tr);
         return null;
       });
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
+      final GoogleSignInAuthentication? googleAuth =
+          await googleUser?.authentication;
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
@@ -161,7 +226,8 @@ class LoginController extends GetxController {
           FireStoreUtils.userExistOrNot(value.user!.uid).then((userExit) async {
             ShowToastDialog.closeLoader();
             if (userExit == true) {
-              UserModel? userModel = await FireStoreUtils.getUserProfile(value.user!.uid);
+              UserModel? userModel =
+                  await FireStoreUtils.getUserProfile(value.user!.uid);
               if (userModel != null) {
                 if (userModel.isActive == true) {
                   Get.offAll(const HomeView());
@@ -209,7 +275,8 @@ class LoginController extends GetxController {
             ShowToastDialog.closeLoader();
 
             if (userExit == true) {
-              UserModel? userModel = await FireStoreUtils.getUserProfile(value.user!.uid);
+              UserModel? userModel =
+                  await FireStoreUtils.getUserProfile(value.user!.uid);
               if (userModel != null) {
                 if (userModel.isActive == true) {
                   Get.offAll(const HomeView());
